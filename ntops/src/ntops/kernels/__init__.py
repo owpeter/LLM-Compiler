@@ -7,6 +7,7 @@ from ntops.kernels import (
     bitwise_not,
     bitwise_or,
     bmm,
+    causal_softmax,
     clamp,
     conv2d,
     cos,
@@ -38,6 +39,7 @@ from ntops.kernels import (
     sin,
     softmax,
     sub,
+    swiglu,
     tanh,
 )
 
@@ -50,6 +52,7 @@ __all__ = [
     "bitwise_not",
     "bitwise_or",
     "bmm",
+    "causal_softmax",
     "clamp",
     "conv2d",
     "cos",
