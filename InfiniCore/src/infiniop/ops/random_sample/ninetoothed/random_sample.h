@@ -80,8 +80,9 @@ public:
         void *stream) const {
         
         int ndim = probs_shape_.size();
+        printf("DEBUG: calculate called with ndim=%d, dtype=%d\n", ndim, dtype_);
         
-        bool supported = (ndim == 2 || ndim == 3);
+        bool supported = (ndim == 1 || ndim == 2);
         if (dtype_ != INFINI_DTYPE_F16 && dtype_ != INFINI_DTYPE_BF16 && dtype_ != INFINI_DTYPE_F32) {
             supported = false;
         }

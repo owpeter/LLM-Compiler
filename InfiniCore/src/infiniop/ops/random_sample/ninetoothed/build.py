@@ -5,7 +5,7 @@ import infiniop.ninetoothed.build
 
 
 def build(
-    ndim_values=(2, 3),
+    ndim_values=(1, 2),
     dtype_values=None,
     block_size_values=(128,),
     num_warps=4,

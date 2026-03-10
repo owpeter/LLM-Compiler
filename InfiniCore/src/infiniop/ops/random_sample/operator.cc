@@ -2,6 +2,9 @@
 #include "../../handle.h"
 #include "infiniop/ops/random_sample.h"
 
+#include <cstdio>
+#include <cstdlib>
+
 #ifdef ENABLE_CPU_API
 #include "cpu/random_sample_cpu.h"
 #endif
@@ -27,6 +30,33 @@
 #include "ninetoothed/random_sample.h"
 #endif
 
+namespace {
+inline bool random_sample_ninetoothed_debug_enabled() {
+    const char *value = std::getenv("INFINI_RANDOM_SAMPLE_DISPATCH_DEBUG");
+    return value != nullptr && value[0] != '0';
+}
+inline void random_sample_ninetoothed_log_create(infiniDevice_t device, int device_id) {
+    if (!random_sample_ninetoothed_debug_enabled()) {
+        return;
+    }
+    std::fprintf(stderr, "[infiniop][random_sample] create backend=ninetoothed device=%d device_id=%d\n",
+                 static_cast<int>(device),
+                 device_id);
+}
+inline void random_sample_ninetoothed_log_call(float random_val, float topp, int topk, float temperature, size_t workspace_size) {
+    if (!random_sample_ninetoothed_debug_enabled()) {
+        return;
+    }
+    std::fprintf(stderr,
+                 "[infiniop][random_sample] call backend=ninetoothed random_val=%g topp=%g topk=%d temperature=%g workspace_size=%zu\n",
+                 random_val,
+                 topp,
+                 topk,
+                 temperature,
+                 workspace_size);
+}
+}
+
 __C infiniStatus_t
 infiniopCreateRandomSampleDescriptor(
     infiniopHandle_t handle,
@@ -49,7 +79,13 @@ infiniopCreateRandomSampleDescriptor(
 #endif
 #ifdef ENABLE_NVIDIA_API
 #ifdef ENABLE_NINETOOTHED
-        CREATE(INFINI_DEVICE_NVIDIA, ninetoothed);
+    case INFINI_DEVICE_NVIDIA:
+        random_sample_ninetoothed_log_create(handle->device, handle->device_id);
+        return op::random_sample::ninetoothed::Descriptor::create(
+            handle,
+            reinterpret_cast<op::random_sample::ninetoothed::Descriptor **>(desc_ptr),
+            result,
+            probs);
 #else
         CREATE(INFINI_DEVICE_NVIDIA, nvidia);
 #endif
@@ -107,7 +143,11 @@ __C infiniStatus_t infiniopGetRandomSampleWorkspaceSize(
 #endif
 #ifdef ENABLE_NVIDIA_API
 #ifdef ENABLE_NINETOOTHED
-        GET(INFINI_DEVICE_NVIDIA, ninetoothed);
+    case INFINI_DEVICE_NVIDIA: {
+        using Ptr = const op::random_sample::ninetoothed::Descriptor *;
+        *size = reinterpret_cast<Ptr>(desc)->minWorkspaceSize();
+    }
+        return INFINI_STATUS_SUCCESS;
 #else
         GET(INFINI_DEVICE_NVIDIA, nvidia);
 #endif
@@ -175,7 +215,14 @@ __C infiniStatus_t infiniopRandomSample(
 #endif
 #ifdef ENABLE_NVIDIA_API
 #ifdef ENABLE_NINETOOTHED
-        CALCULATE(INFINI_DEVICE_NVIDIA, ninetoothed);
+    case INFINI_DEVICE_NVIDIA:
+        random_sample_ninetoothed_log_call(random_val, topp, topk, temperature, workspace_size);
+        return reinterpret_cast<const op::random_sample::ninetoothed::Descriptor *>(desc)
+            ->calculate(workspace, workspace_size,
+                        result, probs,
+                        random_val,
+                        topp, topk, temperature,
+                        stream);
 #else
         CALCULATE(INFINI_DEVICE_NVIDIA, nvidia);
 #endif
@@ -230,7 +277,9 @@ __C infiniStatus_t infiniopDestroyRandomSampleDescriptor(
 #endif
 #ifdef ENABLE_NVIDIA_API
 #ifdef ENABLE_NINETOOTHED
-        DELETE(INFINI_DEVICE_NVIDIA, ninetoothed);
+    case INFINI_DEVICE_NVIDIA:
+        delete reinterpret_cast<const op::random_sample::ninetoothed::Descriptor *>(desc);
+        return INFINI_STATUS_SUCCESS;
 #else
         DELETE(INFINI_DEVICE_NVIDIA, nvidia);
 #endif
