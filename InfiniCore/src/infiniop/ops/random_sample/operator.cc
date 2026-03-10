@@ -23,6 +23,9 @@
 #ifdef ENABLE_KUNLUN_API
 #include "kunlun/random_sample_kunlun.h"
 #endif
+#ifdef ENABLE_NINETOOTHED
+#include "ninetoothed/random_sample.h"
+#endif
 
 __C infiniStatus_t
 infiniopCreateRandomSampleDescriptor(
@@ -45,7 +48,11 @@ infiniopCreateRandomSampleDescriptor(
         CREATE(INFINI_DEVICE_CPU, cpu);
 #endif
 #ifdef ENABLE_NVIDIA_API
+#ifdef ENABLE_NINETOOTHED
+        CREATE(INFINI_DEVICE_NVIDIA, ninetoothed);
+#else
         CREATE(INFINI_DEVICE_NVIDIA, nvidia);
+#endif
 #endif
 #ifdef ENABLE_ILUVATAR_API
         CREATE(INFINI_DEVICE_ILUVATAR, nvidia);
@@ -99,7 +106,11 @@ __C infiniStatus_t infiniopGetRandomSampleWorkspaceSize(
         GET(INFINI_DEVICE_CPU, cpu);
 #endif
 #ifdef ENABLE_NVIDIA_API
+#ifdef ENABLE_NINETOOTHED
+        GET(INFINI_DEVICE_NVIDIA, ninetoothed);
+#else
         GET(INFINI_DEVICE_NVIDIA, nvidia);
+#endif
 #endif
 #ifdef ENABLE_ILUVATAR_API
         GET(INFINI_DEVICE_ILUVATAR, nvidia);
@@ -163,7 +174,11 @@ __C infiniStatus_t infiniopRandomSample(
         CALCULATE(INFINI_DEVICE_CPU, cpu);
 #endif
 #ifdef ENABLE_NVIDIA_API
+#ifdef ENABLE_NINETOOTHED
+        CALCULATE(INFINI_DEVICE_NVIDIA, ninetoothed);
+#else
         CALCULATE(INFINI_DEVICE_NVIDIA, nvidia);
+#endif
 #endif
 #ifdef ENABLE_ILUVATAR_API
         CALCULATE(INFINI_DEVICE_ILUVATAR, nvidia);
@@ -214,7 +229,11 @@ __C infiniStatus_t infiniopDestroyRandomSampleDescriptor(
         DELETE(INFINI_DEVICE_CPU, cpu);
 #endif
 #ifdef ENABLE_NVIDIA_API
+#ifdef ENABLE_NINETOOTHED
+        DELETE(INFINI_DEVICE_NVIDIA, ninetoothed);
+#else
         DELETE(INFINI_DEVICE_NVIDIA, nvidia);
+#endif
 #endif
 #ifdef ENABLE_ILUVATAR_API
         DELETE(INFINI_DEVICE_ILUVATAR, nvidia);
