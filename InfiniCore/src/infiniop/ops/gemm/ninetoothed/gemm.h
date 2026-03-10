@@ -4,6 +4,8 @@
 #include "../../../handle.h"
 #include "../../../operator.h"
 #include "../../../tensor.h"
+#include <cstdio>
+#include <cstdlib>
 
 #include "../../../../../build/ninetoothed/gemm.h"
 #include "../../../ninetoothed/utils.h"
@@ -74,6 +76,7 @@ public:
         float alpha,
         void *stream) const {
         if (alpha != 1.0f || beta != 0.0f || a_shape_.size() != 2 || b_shape_.size() != 2 || c_shape_.size() != 2) {
+            dispatchLog("param_mismatch");
 #ifdef ENABLE_NVIDIA_API
             return fallback_->calculate(workspace, workspace_size, c, beta, a, b, alpha, stream);
 #else
@@ -88,28 +91,36 @@ public:
         static constexpr int input_precision_values[] = {1, 2};
         // todo: change values by reading config file
         static constexpr int block_size_values[][3] = {
-            // {16, 16, 32},
+            // {16, 16, 16},
             // {32, 128, 32},
             {128, 128, 32},
         };
+        static constexpr int unroll_values[] = {4};
 
         for (auto input_precision_value : input_precision_values) {
             ::ninetoothed::Tensor<int> input_precision_tensor{input_precision_value};
             for (const auto &block_size : block_size_values) {
-                if (launch_gemm(stream,
-                                a_nt,
-                                b_nt,
-                                c_nt,
-                                input_precision_tensor,
-                                dtype_,
-                                input_precision_value,
-                                block_size[0],
-                                block_size[1],
-                                block_size[2]) == 0) {
-                    return INFINI_STATUS_SUCCESS;
+                for (auto unroll_value : unroll_values) {
+                    ::ninetoothed::Tensor<int> unroll_tensor{unroll_value};
+                    if (launch_gemm(stream,
+                                    a_nt,
+                                    b_nt,
+                                    c_nt,
+                                    input_precision_tensor,
+                                    unroll_tensor,
+                                    dtype_,
+                                    input_precision_value,
+                                    block_size[0],
+                                    block_size[1],
+                                    block_size[2],
+                                    unroll_value) == 0) {
+                        return INFINI_STATUS_SUCCESS;
+                    }
                 }
             }
         }
+
+        dispatchLog("kernel_not_found");
 
 #ifdef ENABLE_NVIDIA_API
         return fallback_->calculate(workspace, workspace_size, c, beta, a, b, alpha, stream);
@@ -121,6 +132,16 @@ public:
 private:
     using Size = ::ninetoothed::Tensor<>::Size;
     using Stride = ::ninetoothed::Tensor<>::Stride;
+    static bool dispatchDebugEnabled() {
+        const char *value = std::getenv("INFINI_GEMM_DISPATCH_DEBUG");
+        return value != nullptr && value[0] != '0';
+    }
+    static void dispatchLog(const char *reason) {
+        if (!dispatchDebugEnabled()) {
+            return;
+        }
+        std::fprintf(stderr, "[infiniop][gemm] ninetoothed fallback=%s\n", reason);
+    }
 
     std::vector<Size> c_shape_;
     std::vector<Stride> c_strides_;

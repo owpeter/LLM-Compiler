@@ -21,6 +21,7 @@ def arrangement(
     other,
     output,
     input_precision,
+    unroll,
     block_size_m=None,
     block_size_n=None,
     block_size_k=None,
@@ -47,11 +48,12 @@ def arrangement(
     other_arranged.dtype = other_arranged.dtype.squeeze(1)
 
     input_precision_arranged = input_precision
+    unroll_arranged = unroll
 
-    return input_arranged, other_arranged, output_arranged, input_precision_arranged
+    return input_arranged, other_arranged, output_arranged, input_precision_arranged, unroll_arranged
 
 
-def application(input, other, output, input_precision):
+def application(input, other, output, input_precision, unroll):
     accumulator = ntl.zeros(output.shape, dtype=ntl.float32)
 
     if input_precision == 2:  # InputPrecisionVariant.IEEE:
@@ -59,8 +61,15 @@ def application(input, other, output, input_precision):
     else:
         input_precision_: ntl.constexpr = "tf32"
 
-    for k in range(input.shape[0]):
-        accumulator += ntl.dot(input[k], other[k], input_precision=input_precision_)
+    for k in range(0, input.shape[0], unroll):
+        for ku in ntl.static_range(unroll):
+            k_index = k + ku
+            if k_index < input.shape[0]:
+                accumulator += ntl.dot(
+                    input[k_index],
+                    other[k_index],
+                    input_precision=input_precision_,
+                )
 
     output = accumulator
 
@@ -68,6 +77,7 @@ def application(input, other, output, input_precision):
 def premake(
     input_precision=None,
     dtype=None,
+    unroll=1,
     block_size_m=None,
     block_size_n=None,
     block_size_k=None,
@@ -84,6 +94,7 @@ def premake(
         Tensor(2, dtype=dtype),
         Tensor(2, dtype=dtype),
         Tensor(0, constexpr=True, value=input_precision),
+        Tensor(0, constexpr=True, value=unroll),
     )
 
     return arrangement_, application, tensors

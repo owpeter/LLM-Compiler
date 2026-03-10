@@ -13,6 +13,6 @@ def mm(input, mat2, *, out=None):
 
     kernel = _cached_make(ntops.kernels.mm.premake)
 
-    kernel(input, mat2, out, _get_matmul_input_precision())
+    kernel(input, mat2, out, _get_matmul_input_precision(), 1)
 
     return out

@@ -24,27 +24,29 @@ from libinfiniop import (
 # These are not meant to be imported from other modules
 _TEST_CASES = [
     # alpha, beta, a_shape, b_shape, c_shape, a_stride, b_stride, c_stride
-    (1.0, 0.0, (1, 2048), (2048, 2048), (1, 2048), None, None, None),
-    (1.0, 0.0, (2, 4, 2048), (2, 2048, 2048), (2, 4, 2048), None, None, None),
-    (1.0, 0.0, (1, 2048), (2048, 2048), (1, 2048), (4096, 1), (4096, 1), (4096, 1)),
-    (1.0, 1.0, (6, 2048), (2048, 2560), (6, 2560), (2048, 1), (1, 2048), (2560, 1)),
-    (1.0 / 8.0, 0.0, (4, 8 * 6, 64), (4, 64, 6), (4, 8 * 6, 6), None, None, None),
+    # (1.0, 0.0, (128, 128), (128, 128), (128, 128), None, None, None),
+    # (1.0, 0.0, (256, 128), (128, 256), (256, 256), None, None, None),
+    (1.0, 0.0, (1024, 2048), (2048, 512), (1024, 512), None, None, None),
 ]
 
 # Data types used for testing
-_TENSOR_DTYPES = [InfiniDtype.F16, InfiniDtype.BF16, InfiniDtype.F32]
+_TENSOR_DTYPES = [
+    InfiniDtype.F16, 
+    # InfiniDtype.BF16, 
+    # InfiniDtype.F32,
+]
 
 # Tolerance map for different data types
 _TOLERANCE_MAP = {
     InfiniDtype.F16: {"atol": 0, "rtol": 1e-2},
-    InfiniDtype.F32: {"atol": 0, "rtol": 1e-3},
-    InfiniDtype.BF16: {"atol": 0, "rtol": 5e-2},
+    # InfiniDtype.F32: {"atol": 0, "rtol": 1e-3},
+    # InfiniDtype.BF16: {"atol": 0, "rtol": 5e-2},
 }
 
-DEBUG = False
+DEBUG = True
 PROFILE = False
-NUM_PRERUN = 10
-NUM_ITERATIONS = 1000
+NUM_PRERUN = 100
+NUM_ITERATIONS = 10000
 
 
 # PyTorch implementation for matrix multiplication

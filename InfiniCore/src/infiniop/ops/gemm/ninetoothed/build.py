@@ -7,9 +7,10 @@ import infiniop.ninetoothed.build
 def build(
     dtype_values=None,
     input_precision_values=None,
-    block_size_m_values=(16,128),
-    block_size_n_values=(16,128),
-    block_size_k_values=(32,),
+    block_size_m_values=(128,),
+    block_size_n_values=(128,),
+    block_size_k_values=(64,),
+    unroll_values=(4,),
     num_warps=4,
     num_stages=2,
 ):
@@ -32,6 +33,7 @@ def build(
         "block_size_m": block_size_m_values,
         "block_size_n": block_size_n_values,
         "block_size_k": block_size_k_values,
+        "unroll": unroll_values,
     }
 
     infiniop.ninetoothed.build.build(

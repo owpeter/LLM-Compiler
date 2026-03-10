@@ -58,18 +58,6 @@ static const char *gemmDeviceName(infiniDevice_t device) {
     }
 }
 
-static bool gemmDispatchDebugEnabled() {
-    const char *value = std::getenv("INFINI_GEMM_DISPATCH_DEBUG");
-    return value != nullptr && value[0] != '0';
-}
-
-static void gemmDispatchLog(const char *phase, infiniDevice_t device, const char *impl) {
-    if (!gemmDispatchDebugEnabled()) {
-        return;
-    }
-    std::fprintf(stderr, "[infiniop][gemm] %s device=%s(%d) impl=%s\n", phase, gemmDeviceName(device), device, impl);
-}
-
 __C infiniStatus_t infiniopCreateGemmDescriptor(
     infiniopHandle_t handle,
     infiniopGemmDescriptor_t *desc_ptr,
@@ -79,7 +67,6 @@ __C infiniStatus_t infiniopCreateGemmDescriptor(
 
 #define CREATE(CASE, NAMESPACE, IMPL)                                      \
     case CASE:                                                             \
-        gemmDispatchLog("create", CASE, IMPL);                             \
         return op::gemm::NAMESPACE::Descriptor::create(                    \
             handle,                                                         \
             reinterpret_cast<op::gemm::NAMESPACE::Descriptor **>(desc_ptr), \
@@ -150,7 +137,6 @@ infiniopGetGemmWorkspaceSize(
 
 #define GET(CASE, NAMESPACE, IMPL)                                                               \
     case CASE:                                                                                   \
-        gemmDispatchLog("workspace", CASE, IMPL);                                                \
         *size = reinterpret_cast<const op::gemm::NAMESPACE::Descriptor *>(desc)->workspaceSize(); \
         return INFINI_STATUS_SUCCESS
 
@@ -221,7 +207,6 @@ __C infiniStatus_t infiniopGemm(
 
 #define CALCULATE(CASE, NAMESPACE, IMPL)                                       \
     case CASE:                                                                 \
-        gemmDispatchLog("calculate", CASE, IMPL);                              \
         return reinterpret_cast<const op::gemm::NAMESPACE::Descriptor *>(desc) \
             ->calculate(workspace, workspace_size,                             \
                         c, beta,                                               \
@@ -288,7 +273,6 @@ infiniopDestroyGemmDescriptor(infiniopGemmDescriptor_t desc) {
 
 #define DELETE(CASE, NAMESPACE, IMPL)                                           \
     case CASE:                                                                  \
-        gemmDispatchLog("destroy", CASE, IMPL);                                 \
         delete reinterpret_cast<const op::gemm::NAMESPACE::Descriptor *>(desc); \
         return INFINI_STATUS_SUCCESS;
 
