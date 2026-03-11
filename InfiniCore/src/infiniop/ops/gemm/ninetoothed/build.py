@@ -14,6 +14,7 @@ def build(
     num_warps=4,
     num_stages=2,
 ):
+    print("[DEBUG] build gemm in infniniop")
     if dtype_values is None:
         dtype_values = (
             ninetoothed.float16,

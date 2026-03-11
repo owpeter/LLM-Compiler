@@ -4,8 +4,17 @@ import pathlib
 import sys
 import shutil
 
-CURRENT_FILE_PATH = pathlib.Path(__file__)
-PROJECT_ROOT_PATH = CURRENT_FILE_PATH.parent.parent
+CURRENT_FILE_PATH = pathlib.Path(__file__).resolve()
+
+
+def _find_project_root(start: pathlib.Path) -> pathlib.Path:
+    for candidate in [start.parent, *start.parents]:
+        if (candidate / "src" / "infiniop").is_dir():
+            return candidate
+    return start.parents[2]
+
+
+PROJECT_ROOT_PATH = _find_project_root(CURRENT_FILE_PATH)
 SRC_DIR_PATH = PROJECT_ROOT_PATH / "src"
 sys.path.insert(0, str(SRC_DIR_PATH))
 
@@ -206,8 +215,8 @@ def main():
         "--input-precision", default=None, help="输入精度 (逗号分隔，例如 TF32,IEEE)"
     )
     parser.add_argument("--block-m", default="128", help="block_size_m_values (逗号分隔)")
-    parser.add_argument("--block-n", default="256", help="block_size_n_values (逗号分隔)")
-    parser.add_argument("--block-k", default="64", help="block_size_k_values (逗号分隔)")
+    parser.add_argument("--block-n", default="1024", help="block_size_n_values (逗号分隔)")
+    parser.add_argument("--block-k", default="32", help="block_size_k_values (逗号分隔)")
     parser.add_argument("--unroll", default="4", help="unroll_values (逗号分隔)")
     parser.add_argument("--num-warps", type=int, default=4, help="num_warps")
     parser.add_argument("--num-stages", type=int, default=2, help="num_stages")

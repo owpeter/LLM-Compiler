@@ -2,13 +2,17 @@ import argparse
 import csv
 import ctypes
 import importlib.util
+import json
 import os
 import random
+import subprocess
 import sys
+import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -191,7 +195,7 @@ def _ensure_libinfiniop_importable():
 def rebuild_infiniop_gemm():
     cmd = [
         sys.executable,
-        "scripts/install",
+        "scripts/install.py",
         "--nv-gpu=y",
         "--ninetoothed=y",
         "--ops",
@@ -284,9 +288,11 @@ def profile_gemm_ms(
     alpha: float = 1.0,
     beta: float = 0.0,
 ) -> float:
+
     _ensure_libinfiniop_importable()
+    _status(f"开始配置 GEMM 算子 (dtype={dtype}, workload={workload})")
     import torch
-    from ctypes import c_uint64
+    from ctypes import c_size_t
     from libinfiniop import (
         LIBINFINIOP,
         TestTensor,
@@ -302,13 +308,35 @@ def profile_gemm_ms(
     if torch_device_map[device] == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA is not available but NVIDIA device selected")
 
-    LIBINFINIOP.infinirtSetDevice(device, ctypes.c_int(0))
+    device_id = 0
+    if torch_device_map[device] == "cuda":
+        for k in (
+            "LOCAL_RANK",
+            "OMPI_COMM_WORLD_LOCAL_RANK",
+            "MPI_LOCALRANKID",
+            "SLURM_LOCALID",
+        ):
+            v = os.environ.get(k)
+            if v is None:
+                continue
+            v = str(v).strip()
+            if v == "":
+                continue
+            try:
+                device_id = int(v)
+                break
+            except ValueError:
+                continue
+        torch.cuda.set_device(device_id)
+
+    check_error(LIBINFINIOP.infinirtSetDevice(device, ctypes.c_int(device_id)))
+
     handle = create_handle()
     try:
-        a = TestTensor((workload.m, workload.n), None, _dtype_to_infini(dtype), device)
-        b = TestTensor((workload.n, workload.k), None, _dtype_to_infini(dtype), device)
+        a = TestTensor((workload.m, workload.k), None, _dtype_to_infini(dtype), device)
+        b = TestTensor((workload.k, workload.n), None, _dtype_to_infini(dtype), device)
         c = TestTensor(
-            (workload.m, workload.k),
+            (workload.m, workload.n),
             None,
             _dtype_to_infini(dtype),
             device,
@@ -329,7 +357,7 @@ def profile_gemm_ms(
         for t in (a, b, c):
             t.destroy_desc()
 
-        workspace_size = c_uint64(0)
+        workspace_size = c_size_t(0)
         check_error(
             LIBINFINIOP.infiniopGetGemmWorkspaceSize(
                 descriptor, ctypes.byref(workspace_size)
@@ -338,16 +366,18 @@ def profile_gemm_ms(
         workspace = TestWorkspace(workspace_size.value, device)
 
         def lib_gemm():
+            alpha_ = ctypes.c_float(alpha)
+            beta_ = ctypes.c_float(beta)
             check_error(
                 LIBINFINIOP.infiniopGemm(
                     descriptor,
-                    workspace.data(),
-                    workspace_size.value,
-                    c.data(),
-                    a.data(),
-                    b.data(),
-                    alpha,
-                    beta,
+                    ctypes.c_void_p(workspace.data() or 0),
+                    ctypes.c_size_t(workspace_size.value),
+                    ctypes.c_void_p(c.data()),
+                    ctypes.c_void_p(a.data()),
+                    ctypes.c_void_p(b.data()),
+                    alpha_,
+                    beta_,
                     None,
                 )
             )
@@ -360,6 +390,82 @@ def profile_gemm_ms(
         return float(elapsed_sec * 1000.0)
     finally:
         destroy_handle(handle)
+
+
+def _profile_workloads_in_worker(
+    device: str,
+    dtype: str,
+    workloads: list[Workload],
+    num_prerun: int,
+    num_iterations: int,
+) -> list[float]:
+    payload = {
+        "device": str(device),
+        "dtype": str(dtype),
+        "num_prerun": int(num_prerun),
+        "num_iterations": int(num_iterations),
+        "workloads": [{"m": w.m, "n": w.n, "k": w.k} for w in workloads],
+    }
+    with tempfile.NamedTemporaryFile(
+        mode="w", encoding="utf-8", suffix=".json", delete=False
+    ) as f:
+        json.dump(payload, f)
+        in_path = f.name
+    out_path = f"{in_path}.out.json"
+
+    cmd = [
+        sys.executable,
+        str(Path(__file__).resolve()),
+        "--worker",
+        "--worker-in",
+        in_path,
+        "--worker-out",
+        out_path,
+    ]
+    subprocess.run(cmd, check=True)
+    data = json.loads(Path(out_path).read_text(encoding="utf-8"))
+    times = data.get("times_ms")
+    if not isinstance(times, list) or len(times) != len(workloads):
+        raise RuntimeError("Worker returned invalid profile results")
+    return [float(x) for x in times]
+
+
+def _worker_main(worker_in: str, worker_out: str):
+    payload = json.loads(Path(worker_in).read_text(encoding="utf-8"))
+    device_str = str(payload["device"])
+    dtype = str(payload["dtype"])
+    num_prerun = int(payload["num_prerun"])
+    num_iterations = int(payload["num_iterations"])
+    ws = payload["workloads"]
+    if not isinstance(ws, list):
+        raise RuntimeError("Invalid worker input")
+
+    _ensure_libinfiniop_importable()
+    from libinfiniop import InfiniDeviceEnum
+
+    if device_str == "nvidia":
+        device = InfiniDeviceEnum.NVIDIA
+    elif device_str == "cpu":
+        device = InfiniDeviceEnum.CPU
+    else:
+        raise RuntimeError(f"Unsupported device: {device_str}")
+
+    out: list[float] = []
+    for idx, w in enumerate(ws, start=1):
+        workload = Workload(m=int(w["m"]), n=int(w["n"]), k=int(w["k"]))
+        _status(f"Profile {idx}/{len(ws)}: m={workload.m}, n={workload.n}, k={workload.k}")
+        out.append(
+            profile_gemm_ms(
+                device=device,
+                dtype=dtype,
+                workload=workload,
+                num_prerun=num_prerun,
+                num_iterations=num_iterations,
+            )
+        )
+        _status(f"Profile 完成: run_time={out[-1]:.6f} ms")
+
+    Path(worker_out).write_text(json.dumps({"times_ms": out}), encoding="utf-8")
 
 
 def _write_csv_row(path: Path, row: dict[str, Any]):
@@ -390,13 +496,13 @@ def main():
     parser.add_argument("--yaml", default=str(YAML_PATH))
     parser.add_argument("--output", default=str(PROJECT_ROOT / "test" / "profile-test" / "gemm_profile.csv"))
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--rounds", type=int, default=1)
+    parser.add_argument("--rounds", type=int, default=3)
     parser.add_argument("--schedule-samples", type=int, default=1)
     parser.add_argument("--max-total-schedule", type=int, default=1000)
     parser.add_argument("--prefill-samples", type=int, default=20)
     parser.add_argument("--decode-samples", type=int, default=20)
-    parser.add_argument("--num-prerun", type=int, default=100)
-    parser.add_argument("--num-iterations", type=int, default=1000)
+    parser.add_argument("--num-prerun", type=int, default=1000)
+    parser.add_argument("--num-iterations", type=int, default=10000)
     parser.add_argument("--device", choices=["nvidia", "cpu"], default="nvidia")
     parser.add_argument("--ntops-path", default="")
     parser.add_argument("--ninetoothed-path", default="")
@@ -404,7 +510,16 @@ def main():
     parser.add_argument("--skip-install", action="store_true")
     parser.add_argument("--skip-cleanup", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--worker", action="store_true")
+    parser.add_argument("--worker-in", default="")
+    parser.add_argument("--worker-out", default="")
     args = parser.parse_args()
+
+    if args.worker:
+        if args.worker_in == "" or args.worker_out == "":
+            raise RuntimeError("--worker requires --worker-in and --worker-out")
+        _worker_main(args.worker_in, args.worker_out)
+        return
 
     _status("GEMM profile 脚本启动")
     _status(f"project_root={PROJECT_ROOT}")
@@ -436,18 +551,7 @@ def main():
         "num_warps": list(schedule_cfg["num_warps"]),
         "num_stages": list(schedule_cfg["num_stages"]),
     }
-
-    device = None
-    if args.device == "nvidia":
-        _ensure_libinfiniop_importable()
-        from libinfiniop import InfiniDeviceEnum
-
-        device = InfiniDeviceEnum.NVIDIA
-    else:
-        _ensure_libinfiniop_importable()
-        from libinfiniop import InfiniDeviceEnum
-
-        device = InfiniDeviceEnum.CPU
+    device = args.device
 
     build_gemm = _load_build_gemm_func(BUILD_GEMM_NT_PATH)
 
@@ -528,16 +632,14 @@ def main():
                 _status("skip-install: 跳过重新编译算子库")
 
             _status("开始 profile workloads")
-            for idx, w in enumerate(workloads, start=1):
-                _status(f"Profile {idx}/{len(workloads)}: m={w.m}, n={w.n}, k={w.k}")
-                run_time_ms = profile_gemm_ms(
-                    device=device,
-                    dtype=s.dtype,
-                    workload=w,
-                    num_prerun=args.num_prerun,
-                    num_iterations=args.num_iterations,
-                )
-                _status(f"Profile 完成: run_time={run_time_ms:.6f} ms")
+            times_ms = _profile_workloads_in_worker(
+                device=device,
+                dtype=s.dtype,
+                workloads=workloads,
+                num_prerun=args.num_prerun,
+                num_iterations=args.num_iterations,
+            )
+            for w, run_time_ms in zip(workloads, times_ms):
                 _write_csv_row(
                     out_path,
                     {
