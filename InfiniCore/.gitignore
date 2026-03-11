@@ -32,3 +32,6 @@ cache/
 *.gz
 *.zip
 *.tar
+
+# CSV
+*.csv
