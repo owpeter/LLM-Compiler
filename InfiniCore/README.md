@@ -106,7 +106,14 @@ python scripts/install.py [XMAKE_CONFIG_FLAGS]
 | `--kunlun-xpu=[y\|n]`    | 是否编译昆仑 XPU 接口实现         | n
 | `--ali-ppu=[y\|n]`       | 是否编译阿里 PPU 接口实现         | n
 | `--ninetoothed=[y\|n]`   | 是否编译九齿实现                 | n
+| `--ninetoothed_ops=op1,op2,...` | 仅编译指定九齿算子（空为全部） | 空
 | `--ccl=[y\|n]`           | 是否编译 InfiniCCL 通信库接口实现 | n
+
+另外，`install.py` 支持额外参数（不属于 xmake 配置）：
+
+| 选项              | 功能 |
+|-------------------|------|
+| `--ops=op1,op2,...` | 仅编译指定九齿算子（会自动转成 `--ninetoothed_ops` 传给 xmake），需同时开启 `--ninetoothed=y` |
 
 ##### 手动安装底层库
 

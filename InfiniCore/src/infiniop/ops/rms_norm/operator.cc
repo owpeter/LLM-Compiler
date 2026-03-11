@@ -11,7 +11,7 @@
 #ifdef ENABLE_ASCEND_API
 #include "ascend/rms_norm_aclnn.h"
 #endif
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_RMS_NORM))
 #include "ninetoothed/rms_norm.h"
 #endif
 #ifdef ENABLE_CAMBRICON_API
@@ -50,7 +50,7 @@ __C infiniStatus_t infiniopCreateRMSNormDescriptor(
         CREATE(INFINI_DEVICE_CPU, cpu);
 #endif
 #ifdef ENABLE_NVIDIA_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_RMS_NORM))
         CREATE(INFINI_DEVICE_NVIDIA, ninetoothed);
 #else
         CREATE(INFINI_DEVICE_NVIDIA, nvidia);
@@ -102,7 +102,7 @@ __C infiniStatus_t infiniopGetRMSNormWorkspaceSize(infiniopRMSNormDescriptor_t d
         GET(INFINI_DEVICE_CPU, cpu);
 #endif
 #ifdef ENABLE_NVIDIA_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_RMS_NORM))
         GET(INFINI_DEVICE_NVIDIA, ninetoothed);
 #else
         GET(INFINI_DEVICE_NVIDIA, nvidia);
@@ -155,7 +155,7 @@ __C infiniStatus_t infiniopRMSNorm(infiniopRMSNormDescriptor_t desc, void *works
         CALCULATE(INFINI_DEVICE_CPU, cpu);
 #endif
 #ifdef ENABLE_NVIDIA_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_RMS_NORM))
         CALCULATE(INFINI_DEVICE_NVIDIA, ninetoothed);
 #else
         CALCULATE(INFINI_DEVICE_NVIDIA, nvidia);
@@ -207,7 +207,7 @@ __C infiniStatus_t infiniopDestroyRMSNormDescriptor(infiniopRMSNormDescriptor_t 
         DESTROY(INFINI_DEVICE_CPU, cpu);
 #endif
 #ifdef ENABLE_NVIDIA_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_RMS_NORM))
         DESTROY(INFINI_DEVICE_NVIDIA, ninetoothed);
 #else
         DESTROY(INFINI_DEVICE_NVIDIA, nvidia);

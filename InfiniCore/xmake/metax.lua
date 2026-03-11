@@ -55,14 +55,26 @@ target("infiniop-metax")
     if has_config("ninetoothed") then
         add_includedirs(MACA_ROOT .. "/include/hcr")
         add_includedirs(MACA_ROOT .. "/include/mcr")
-        add_files("../build/ninetoothed/*.c", "../build/ninetoothed/*.cpp", {
+        local ops = get_config("ninetoothed_ops")
+        local opts = {
             cxflags = {
-                "-include stdlib.h", 
-                "-Wno-return-type", 
+                "-include stdlib.h",
+                "-Wno-return-type",
                 "-Wno-implicit-function-declaration",
                 "-Wno-builtin-declaration-mismatch"
             }
-        })
+        }
+        if ops and type(ops) == "string" and ops:trim() ~= "" then
+            for _, op in ipairs(ops:split(",")) do
+                op = op:trim()
+                if op ~= "" then
+                    add_files("../build/ninetoothed/" .. op .. ".c", "../build/ninetoothed/" .. op .. ".cpp", opts)
+                    add_files("../build/ninetoothed/" .. op .. "_*.c", "../build/ninetoothed/" .. op .. "_*.cpp", opts)
+                end
+            end
+        else
+            add_files("../build/ninetoothed/*.c", "../build/ninetoothed/*.cpp", opts)
+        end
     end
 target_end()
 

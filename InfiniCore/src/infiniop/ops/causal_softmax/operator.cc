@@ -5,7 +5,7 @@
 #ifdef ENABLE_CPU_API
 #include "cpu/causal_softmax_cpu.h"
 #endif
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_CAUSAL_SOFTMAX))
 #include "ninetoothed/causal_softmax.h"
 #endif
 #if defined(ENABLE_NVIDIA_API) || defined(ENABLE_ILUVATAR_API) || defined(ENABLE_QY_API) || defined(ENABLE_HYGON_API) || defined(ENABLE_ALI_API)
@@ -46,7 +46,7 @@ __C infiniStatus_t infiniopCreateCausalSoftmaxDescriptor(
         CREATE(INFINI_DEVICE_CPU, cpu)
 #endif
 #ifdef ENABLE_NVIDIA_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_CAUSAL_SOFTMAX))
         CREATE(INFINI_DEVICE_NVIDIA, ninetoothed)
 #else
         CREATE(INFINI_DEVICE_NVIDIA, nvidia)
@@ -95,7 +95,7 @@ __C infiniStatus_t infiniopGetCausalSoftmaxWorkspaceSize(infiniopCausalSoftmaxDe
         GET(INFINI_DEVICE_CPU, cpu)
 #endif
 #ifdef ENABLE_NVIDIA_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_CAUSAL_SOFTMAX))
         GET(INFINI_DEVICE_NVIDIA, ninetoothed)
 #else
         GET(INFINI_DEVICE_NVIDIA, nvidia)
@@ -149,7 +149,7 @@ __C infiniStatus_t infiniopCausalSoftmax(
         CALCULATE(INFINI_DEVICE_CPU, cpu)
 #endif
 #ifdef ENABLE_NVIDIA_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_CAUSAL_SOFTMAX))
         CALCULATE(INFINI_DEVICE_NVIDIA, ninetoothed)
 #else
         CALCULATE(INFINI_DEVICE_NVIDIA, nvidia)
@@ -198,7 +198,7 @@ __C infiniStatus_t infiniopDestroyCausalSoftmaxDescriptor(infiniopCausalSoftmaxD
         DESTROY(INFINI_DEVICE_CPU, cpu)
 #endif
 #ifdef ENABLE_NVIDIA_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_CAUSAL_SOFTMAX))
         DESTROY(INFINI_DEVICE_NVIDIA, ninetoothed)
 #else
         DESTROY(INFINI_DEVICE_NVIDIA, nvidia)

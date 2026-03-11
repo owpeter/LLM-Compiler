@@ -72,7 +72,19 @@ target("infiniop-hygon")
     add_files("../src/infiniop/devices/nvidia/*.cu", "../src/infiniop/ops/*/nvidia/*.cu")
 
     if has_config("ninetoothed") then
-        add_files("../build/ninetoothed/*.c", "../build/ninetoothed/*.cpp", {cxxflags = {"-Wno-return-type"}})
+        local ops = get_config("ninetoothed_ops")
+        local opts = {cxxflags = {"-Wno-return-type"}}
+        if ops and type(ops) == "string" and ops:trim() ~= "" then
+            for _, op in ipairs(ops:split(",")) do
+                op = op:trim()
+                if op ~= "" then
+                    add_files("../build/ninetoothed/" .. op .. ".c", "../build/ninetoothed/" .. op .. ".cpp", opts)
+                    add_files("../build/ninetoothed/" .. op .. "_*.c", "../build/ninetoothed/" .. op .. "_*.cpp", opts)
+                end
+            end
+        else
+            add_files("../build/ninetoothed/*.c", "../build/ninetoothed/*.cpp", opts)
+        end
     end
 target_end()
 

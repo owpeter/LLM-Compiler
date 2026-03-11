@@ -16,7 +16,7 @@
 #ifdef ENABLE_ASCEND_API
 #include "ascend/gemm_ascend.h"
 #endif
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_GEMM))
 #include "ninetoothed/gemm.h"
 #endif
 #ifdef ENABLE_METAX_API
@@ -80,14 +80,14 @@ __C infiniStatus_t infiniopCreateGemmDescriptor(
         CREATE(INFINI_DEVICE_CPU, cpu, "cpu");
 #endif
 #ifdef ENABLE_NVIDIA_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_GEMM))
         CREATE(INFINI_DEVICE_NVIDIA, ninetoothed, "ninetoothed");
 #else
         CREATE(INFINI_DEVICE_NVIDIA, nvidia, "nvidia");
 #endif
 #endif
 #ifdef ENABLE_ILUVATAR_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_GEMM))
         CREATE(INFINI_DEVICE_ILUVATAR, ninetoothed, "ninetoothed");
 #else
         CREATE(INFINI_DEVICE_ILUVATAR, nvidia, "nvidia");
@@ -109,7 +109,7 @@ __C infiniStatus_t infiniopCreateGemmDescriptor(
         CREATE(INFINI_DEVICE_ASCEND, ascend, "ascend");
 #endif
 #ifdef ENABLE_METAX_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_GEMM))
         CREATE(INFINI_DEVICE_METAX, ninetoothed, "ninetoothed");
 #else
         CREATE(INFINI_DEVICE_METAX, metax, "metax");
@@ -146,14 +146,14 @@ infiniopGetGemmWorkspaceSize(
         GET(INFINI_DEVICE_CPU, cpu, "cpu");
 #endif
 #ifdef ENABLE_NVIDIA_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_GEMM))
         GET(INFINI_DEVICE_NVIDIA, ninetoothed, "ninetoothed");
 #else
         GET(INFINI_DEVICE_NVIDIA, nvidia, "nvidia");
 #endif
 #endif
 #ifdef ENABLE_ILUVATAR_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_GEMM))
         GET(INFINI_DEVICE_ILUVATAR, ninetoothed, "ninetoothed");
 #else
         GET(INFINI_DEVICE_ILUVATAR, nvidia, "nvidia");
@@ -175,7 +175,7 @@ infiniopGetGemmWorkspaceSize(
         GET(INFINI_DEVICE_ASCEND, ascend, "ascend");
 #endif
 #ifdef ENABLE_METAX_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_GEMM))
         GET(INFINI_DEVICE_METAX, ninetoothed, "ninetoothed");
 #else
         GET(INFINI_DEVICE_METAX, metax, "metax");
@@ -219,14 +219,14 @@ __C infiniStatus_t infiniopGemm(
         CALCULATE(INFINI_DEVICE_CPU, cpu, "cpu");
 #endif
 #ifdef ENABLE_NVIDIA_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_GEMM))
         CALCULATE(INFINI_DEVICE_NVIDIA, ninetoothed, "ninetoothed");
 #else
         CALCULATE(INFINI_DEVICE_NVIDIA, nvidia, "nvidia");
 #endif
 #endif
 #ifdef ENABLE_ILUVATAR_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_GEMM))
         CALCULATE(INFINI_DEVICE_ILUVATAR, ninetoothed, "ninetoothed");
 #else
         CALCULATE(INFINI_DEVICE_ILUVATAR, nvidia, "nvidia");
@@ -248,7 +248,7 @@ __C infiniStatus_t infiniopGemm(
         CALCULATE(INFINI_DEVICE_ASCEND, ascend, "ascend");
 #endif
 #ifdef ENABLE_METAX_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_GEMM))
         CALCULATE(INFINI_DEVICE_METAX, ninetoothed, "ninetoothed");
 #else
         CALCULATE(INFINI_DEVICE_METAX, metax, "metax");
@@ -282,14 +282,14 @@ infiniopDestroyGemmDescriptor(infiniopGemmDescriptor_t desc) {
         DELETE(INFINI_DEVICE_CPU, cpu, "cpu");
 #endif
 #ifdef ENABLE_NVIDIA_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_GEMM))
         DELETE(INFINI_DEVICE_NVIDIA, ninetoothed, "ninetoothed");
 #else
         DELETE(INFINI_DEVICE_NVIDIA, nvidia, "nvidia");
 #endif
 #endif
 #ifdef ENABLE_ILUVATAR_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_GEMM))
         DELETE(INFINI_DEVICE_ILUVATAR, ninetoothed, "ninetoothed");
 #else
         DELETE(INFINI_DEVICE_ILUVATAR, nvidia, "nvidia");
@@ -311,7 +311,7 @@ infiniopDestroyGemmDescriptor(infiniopGemmDescriptor_t desc) {
         DELETE(INFINI_DEVICE_ASCEND, ascend, "ascend");
 #endif
 #ifdef ENABLE_METAX_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_GEMM))
         DELETE(INFINI_DEVICE_METAX, ninetoothed, "ninetoothed");
 #else
         DELETE(INFINI_DEVICE_METAX, metax, "metax");

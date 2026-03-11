@@ -216,8 +216,25 @@ option("ninetoothed")
     set_description("Whether to complie NineToothed implementations")
 option_end()
 
+option("ninetoothed_ops")
+    set_default("")
+    set_showmenu(true)
+    set_description("Comma-separated ninetoothed ops to compile (empty means all)")
+option_end()
+
 if has_config("ninetoothed") then
     add_defines("ENABLE_NINETOOTHED")
+    local ops = get_config("ninetoothed_ops")
+    if ops and type(ops) == "string" and ops:trim() ~= "" then
+        for _, op in ipairs(ops:split(",")) do
+            op = op:trim()
+            if op ~= "" then
+                add_defines("ENABLE_NINETOOTHED_OP_" .. op:upper():gsub("%W", "_"))
+            end
+        end
+    else
+        add_defines("ENABLE_NINETOOTHED_ALL_OPS")
+    end
 end
 
 -- cuda graph

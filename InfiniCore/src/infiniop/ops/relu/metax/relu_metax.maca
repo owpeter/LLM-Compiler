@@ -1,4 +1,4 @@
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_RELU))
 
 #include "../../../../../build/ninetoothed/relu.h"
 #include "../../../devices/metax/metax_common.h"

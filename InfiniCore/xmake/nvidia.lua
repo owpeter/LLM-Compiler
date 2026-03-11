@@ -74,7 +74,18 @@ target("infiniop-nvidia")
     add_files("../src/infiniop/devices/nvidia/*.cu", "../src/infiniop/ops/*/nvidia/*.cu", "../src/infiniop/ops/*/*/nvidia/*.cu")
 
     if has_config("ninetoothed") then
-        add_files("../build/ninetoothed/*.c", "../build/ninetoothed/*.cpp")
+        local ops = get_config("ninetoothed_ops")
+        if ops and type(ops) == "string" and ops:trim() ~= "" then
+            for _, op in ipairs(ops:split(",")) do
+                op = op:trim()
+                if op ~= "" then
+                    add_files("../build/ninetoothed/" .. op .. ".c", "../build/ninetoothed/" .. op .. ".cpp")
+                    add_files("../build/ninetoothed/" .. op .. "_*.c", "../build/ninetoothed/" .. op .. "_*.cpp")
+                end
+            end
+        else
+            add_files("../build/ninetoothed/*.c", "../build/ninetoothed/*.cpp")
+        end
     end
 target_end()
 

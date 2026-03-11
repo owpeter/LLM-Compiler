@@ -26,7 +26,7 @@
 #ifdef ENABLE_KUNLUN_API
 #include "kunlun/random_sample_kunlun.h"
 #endif
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_RANDOM_SAMPLE))
 #include "ninetoothed/random_sample.h"
 #endif
 
@@ -78,7 +78,7 @@ infiniopCreateRandomSampleDescriptor(
         CREATE(INFINI_DEVICE_CPU, cpu);
 #endif
 #ifdef ENABLE_NVIDIA_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_RANDOM_SAMPLE))
     case INFINI_DEVICE_NVIDIA:
         random_sample_ninetoothed_log_create(handle->device, handle->device_id);
         return op::random_sample::ninetoothed::Descriptor::create(
@@ -142,7 +142,7 @@ __C infiniStatus_t infiniopGetRandomSampleWorkspaceSize(
         GET(INFINI_DEVICE_CPU, cpu);
 #endif
 #ifdef ENABLE_NVIDIA_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_RANDOM_SAMPLE))
     case INFINI_DEVICE_NVIDIA: {
         using Ptr = const op::random_sample::ninetoothed::Descriptor *;
         *size = reinterpret_cast<Ptr>(desc)->minWorkspaceSize();
@@ -214,7 +214,7 @@ __C infiniStatus_t infiniopRandomSample(
         CALCULATE(INFINI_DEVICE_CPU, cpu);
 #endif
 #ifdef ENABLE_NVIDIA_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_RANDOM_SAMPLE))
     case INFINI_DEVICE_NVIDIA:
         random_sample_ninetoothed_log_call(random_val, topp, topk, temperature, workspace_size);
         return reinterpret_cast<const op::random_sample::ninetoothed::Descriptor *>(desc)
@@ -276,7 +276,7 @@ __C infiniStatus_t infiniopDestroyRandomSampleDescriptor(
         DELETE(INFINI_DEVICE_CPU, cpu);
 #endif
 #ifdef ENABLE_NVIDIA_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_RANDOM_SAMPLE))
     case INFINI_DEVICE_NVIDIA:
         delete reinterpret_cast<const op::random_sample::ninetoothed::Descriptor *>(desc);
         return INFINI_STATUS_SUCCESS;

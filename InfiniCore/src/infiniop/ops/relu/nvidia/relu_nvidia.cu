@@ -1,4 +1,4 @@
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_RELU))
 #include "../../../../../build/ninetoothed/relu.h"
 #include "../../../ninetoothed/utils.h"
 #endif
@@ -44,7 +44,7 @@ infiniStatus_t Descriptor::calculate(
     if (workspace_size < _workspace_size) {
         return INFINI_STATUS_INSUFFICIENT_WORKSPACE;
     }
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_RELU))
     const auto &ndim{_info.getNdim()};
 
     auto x{ninetoothed::Tensor{inputs[0], _info.getInputShape(0), _info.getInputStrides(0), ndim}};
