@@ -3,19 +3,22 @@ schedule:
     - float16
     # - bfloat16
   block_m:
-    - 64
-    - 128
-    - 256
-  block_n:
-    - 64
-    - 128
-    - 256
-  block_k:
+    - 16
     - 32
     - 64
     - 128
+  block_n:
+    - 16
+    - 32
+    - 64
+    - 128
+  block_k:
+    - 16
+    - 32
+    - 64
+    - 128
+    - 256
   unroll:
-    - 1
     - 2
     - 4
     - 8
@@ -24,7 +27,6 @@ schedule:
     - 4
     - 8
   num_stages:
-    - 1
     - 2
     - 3
     - 4
@@ -42,8 +44,8 @@ workload:
       - 4096
     k:
       - 512
+      - 1024
       - 2048
-      - 4096
   decode:
     m:
       - 8

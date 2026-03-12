@@ -91,9 +91,11 @@ public:
         static constexpr int input_precision_values[] = {1, 2};
         // todo: change values by reading config file
         static constexpr int block_size_values[][3] = {
-            {32, 16, 256},
+            // {16, 16, 16},
+            // {32, 128, 32},
+            {128, 128, 32},
         };
-        static constexpr int unroll_values[] = {2};
+        static constexpr int unroll_values[] = {4};
 
         for (auto input_precision_value : input_precision_values) {
             ::ninetoothed::Tensor<int> input_precision_tensor{input_precision_value};

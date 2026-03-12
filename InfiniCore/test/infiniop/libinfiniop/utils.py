@@ -678,13 +678,16 @@ def profile_operation(desc, func, torch_device, NUM_PRERUN, NUM_ITERATIONS):
     - NUM_PRERUN (int): The number of warmup runs.
     - NUM_ITERATIONS (int): The number of timed execution iterations, used to calculate the average execution time.
     """
-    # Warmup runs
+    if not isinstance(torch_device, str):
+        torch_device = torch_device_map[torch_device]
+
     for _ in range(NUM_PRERUN):
         func()
 
     # Timed execution
     elapsed = timed_op(lambda: func(), NUM_ITERATIONS, torch_device)
     print(f" {desc} time: {elapsed * 1000:6f} ms")
+    return elapsed
 
 
 def test_operator(device, test_func, test_cases, tensor_dtypes):

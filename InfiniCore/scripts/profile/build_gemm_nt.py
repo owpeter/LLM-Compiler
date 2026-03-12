@@ -215,7 +215,7 @@ def main():
         "--input-precision", default=None, help="输入精度 (逗号分隔，例如 TF32,IEEE)"
     )
     parser.add_argument("--block-m", default="128", help="block_size_m_values (逗号分隔)")
-    parser.add_argument("--block-n", default="1024", help="block_size_n_values (逗号分隔)")
+    parser.add_argument("--block-n", default="128", help="block_size_n_values (逗号分隔)")
     parser.add_argument("--block-k", default="32", help="block_size_k_values (逗号分隔)")
     parser.add_argument("--unroll", default="4", help="unroll_values (逗号分隔)")
     parser.add_argument("--num-warps", type=int, default=4, help="num_warps")

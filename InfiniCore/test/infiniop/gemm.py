@@ -26,7 +26,8 @@ _TEST_CASES = [
     # alpha, beta, a_shape, b_shape, c_shape, a_stride, b_stride, c_stride
     # (1.0, 0.0, (128, 128), (128, 128), (128, 128), None, None, None),
     # (1.0, 0.0, (256, 128), (128, 256), (256, 256), None, None, None),
-    (1.0, 0.0, (1024, 2048), (2048, 512), (1024, 512), None, None, None),
+    # (1.0, 0.0, (1024, 2048), (2048, 512), (1024, 512), None, None, None),
+    (1.0, 0.0, (512, 4096), (4096, 1024), (512, 1024), None, None, None),
 ]
 
 # Data types used for testing
@@ -158,12 +159,14 @@ def test(
     assert torch.allclose(c.actual_tensor(), ans.torch_tensor(), atol=atol, rtol=rtol)
 
     # Profiling workflow
+    lib_ms = None
     if PROFILE:
         # fmt: off
         profile_operation("PyTorch", lambda: torch_gemm(), device, NUM_PRERUN, NUM_ITERATIONS)
-        profile_operation("    lib", lambda: lib_gemm(), device, NUM_PRERUN, NUM_ITERATIONS)
+        lib_ms = float(profile_operation("    lib", lambda: lib_gemm(), device, NUM_PRERUN, NUM_ITERATIONS) * 1000.0)
         # fmt: on
     check_error(LIBINFINIOP.infiniopDestroyGemmDescriptor(descriptor))
+    return lib_ms
 
 
 # ==============================================================================

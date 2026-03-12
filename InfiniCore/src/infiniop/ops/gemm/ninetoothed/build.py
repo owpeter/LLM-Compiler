@@ -10,8 +10,8 @@ def build(
     block_size_m_values=(128,),
     block_size_n_values=(128,),
     block_size_k_values=(64,),
-    unroll_values=(4,),
-    num_warps=4,
+    unroll_values=(1,),
+    num_warps=1,
     num_stages=2,
 ):
     print("[DEBUG] build gemm in infniniop")

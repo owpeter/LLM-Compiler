@@ -189,7 +189,9 @@ def _load_build_gemm_func(path: Path):
 
 
 def _ensure_libinfiniop_importable():
-    sys.path.insert(0, str(INFINIOP_TEST_ROOT))
+    p = str(INFINIOP_TEST_ROOT)
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
 
 def rebuild_infiniop_gemm():
@@ -209,6 +211,51 @@ def rebuild_infiniop_gemm():
         raise RuntimeError(f"Rebuild failed with exit code {p}")
     elapsed = time.time() - start
     _status(f"重新编译完成，用时 {elapsed:.2f}s")
+
+
+def _render_ninetoothed_gemm_header(template_text: str, s: "ScheduleParams") -> str:
+    lines = template_text.splitlines(keepends=True)
+    replaced_block = False
+    replaced_unroll = False
+    out: list[str] = []
+    for line in lines:
+        if (
+            (not replaced_block)
+            and "block_m" in line
+            and "block_n" in line
+            and "block_k" in line
+            and "{" in line
+            and "}" in line
+        ):
+            out.append(
+                line.replace("block_m", str(s.block_m))
+                .replace("block_n", str(s.block_n))
+                .replace("block_k", str(s.block_k))
+            )
+            replaced_block = True
+            continue
+        if (not replaced_unroll) and "unroll_values" in line and "{unroll}" in line:
+            out.append(line.replace("{unroll}", f"{{{s.unroll}}}"))
+            replaced_unroll = True
+            continue
+        out.append(line)
+
+    if not replaced_block:
+        raise RuntimeError("Failed to patch block_m/block_n/block_k in gemm.h.tmp")
+    if not replaced_unroll:
+        raise RuntimeError("Failed to patch unroll in gemm.h.tmp")
+    return "".join(out)
+
+
+def _materialize_ninetoothed_gemm_header(
+    template_text: str, tmp_path: Path, out_path: Path, s: "ScheduleParams"
+):
+    rendered = _render_ninetoothed_gemm_header(template_text, s)
+    tmp_path.write_text(rendered, encoding="utf-8")
+    try:
+        os.replace(str(tmp_path), str(out_path))
+    finally:
+        tmp_path.write_text(template_text, encoding="utf-8")
 
 
 @dataclass(frozen=True)
@@ -267,18 +314,6 @@ def sample_workloads(
     return out
 
 
-def _dtype_to_infini(dtype: str):
-    from libinfiniop import InfiniDtype
-
-    if dtype == "float16":
-        return InfiniDtype.F16
-    if dtype == "bfloat16":
-        return InfiniDtype.BF16
-    if dtype == "float32":
-        return InfiniDtype.F32
-    raise ValueError(f"Unsupported dtype: {dtype}")
-
-
 def profile_gemm_ms(
     device,
     dtype: str,
@@ -288,106 +323,57 @@ def profile_gemm_ms(
     alpha: float = 1.0,
     beta: float = 0.0,
 ) -> float:
-
     _ensure_libinfiniop_importable()
     _status(f"开始配置 GEMM 算子 (dtype={dtype}, workload={workload})")
     import torch
-    from ctypes import c_size_t
     from libinfiniop import (
         LIBINFINIOP,
-        TestTensor,
-        TestWorkspace,
         check_error,
         create_handle,
         destroy_handle,
-        timed_op,
+        get_sync_func,
         torch_device_map,
-        infiniopOperatorDescriptor_t,
+        InfiniDtype,
     )
+    import gemm as gemm_mod
 
     if torch_device_map[device] == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA is not available but NVIDIA device selected")
 
-    device_id = 0
-    if torch_device_map[device] == "cuda":
-        for k in (
-            "LOCAL_RANK",
-            "OMPI_COMM_WORLD_LOCAL_RANK",
-            "MPI_LOCALRANKID",
-            "SLURM_LOCALID",
-        ):
-            v = os.environ.get(k)
-            if v is None:
-                continue
-            v = str(v).strip()
-            if v == "":
-                continue
-            try:
-                device_id = int(v)
-                break
-            except ValueError:
-                continue
-        torch.cuda.set_device(device_id)
+    if dtype == "float16":
+        dt = InfiniDtype.F16
+    elif dtype == "bfloat16":
+        dt = InfiniDtype.BF16
+    elif dtype == "float32":
+        dt = InfiniDtype.F32
+    else:
+        raise ValueError(f"Unsupported dtype: {dtype}")
 
-    check_error(LIBINFINIOP.infinirtSetDevice(device, ctypes.c_int(device_id)))
+    gemm_mod.DEBUG = False
+    gemm_mod.PROFILE = True
+    gemm_mod.NUM_PRERUN = int(num_prerun)
+    gemm_mod.NUM_ITERATIONS = int(num_iterations)
 
+    check_error(LIBINFINIOP.infinirtSetDevice(device, ctypes.c_int(0)))
     handle = create_handle()
     try:
-        a = TestTensor((workload.m, workload.k), None, _dtype_to_infini(dtype), device)
-        b = TestTensor((workload.k, workload.n), None, _dtype_to_infini(dtype), device)
-        c = TestTensor(
-            (workload.m, workload.n),
-            None,
-            _dtype_to_infini(dtype),
+        lib_ms = gemm_mod.test(
+            handle,
             device,
-            mode="zeros",
+            float(alpha),
+            float(beta),
+            (int(workload.m), int(workload.k)),
+            (int(workload.k), int(workload.n)),
+            (int(workload.m), int(workload.n)),
+            None,
+            None,
+            None,
+            dt,
+            get_sync_func(device),
         )
-
-        descriptor = infiniopOperatorDescriptor_t()
-        check_error(
-            LIBINFINIOP.infiniopCreateGemmDescriptor(
-                handle,
-                ctypes.byref(descriptor),
-                c.descriptor,
-                a.descriptor,
-                b.descriptor,
-            )
-        )
-
-        for t in (a, b, c):
-            t.destroy_desc()
-
-        workspace_size = c_size_t(0)
-        check_error(
-            LIBINFINIOP.infiniopGetGemmWorkspaceSize(
-                descriptor, ctypes.byref(workspace_size)
-            )
-        )
-        workspace = TestWorkspace(workspace_size.value, device)
-
-        def lib_gemm():
-            alpha_ = ctypes.c_float(alpha)
-            beta_ = ctypes.c_float(beta)
-            check_error(
-                LIBINFINIOP.infiniopGemm(
-                    descriptor,
-                    ctypes.c_void_p(workspace.data() or 0),
-                    ctypes.c_size_t(workspace_size.value),
-                    ctypes.c_void_p(c.data()),
-                    ctypes.c_void_p(a.data()),
-                    ctypes.c_void_p(b.data()),
-                    alpha_,
-                    beta_,
-                    None,
-                )
-            )
-
-        for _ in range(num_prerun):
-            lib_gemm()
-
-        elapsed_sec = timed_op(lib_gemm, num_iterations, torch_device_map[device])
-        check_error(LIBINFINIOP.infiniopDestroyGemmDescriptor(descriptor))
-        return float(elapsed_sec * 1000.0)
+        if lib_ms is None:
+            raise RuntimeError("GEMM test did not return profile time")
+        return float(lib_ms)
     finally:
         destroy_handle(handle)
 
@@ -496,7 +482,7 @@ def main():
     parser.add_argument("--yaml", default=str(YAML_PATH))
     parser.add_argument("--output", default=str(PROJECT_ROOT / "test" / "profile-test" / "gemm_profile.csv"))
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--rounds", type=int, default=3)
+    parser.add_argument("--rounds", type=int, default=1000)
     parser.add_argument("--schedule-samples", type=int, default=1)
     parser.add_argument("--max-total-schedule", type=int, default=1000)
     parser.add_argument("--prefill-samples", type=int, default=20)
@@ -554,6 +540,18 @@ def main():
     device = args.device
 
     build_gemm = _load_build_gemm_func(BUILD_GEMM_NT_PATH)
+
+    gemm_header_tmp_path = (
+        PROJECT_ROOT
+        / "src"
+        / "infiniop"
+        / "ops"
+        / "gemm"
+        / "ninetoothed"
+        / "gemm.h.tmp"
+    )
+    gemm_header_out_path = gemm_header_tmp_path.with_suffix("")
+    gemm_header_template_text = gemm_header_tmp_path.read_text(encoding="utf-8")
 
     total_schedule = 0
     out_path = Path(args.output)
@@ -620,6 +618,12 @@ def main():
                     num_warps=int(s.num_warps),
                     num_stages=int(s.num_stages),
                     skip_cleanup=bool(args.skip_cleanup),
+                )
+                _materialize_ninetoothed_gemm_header(
+                    gemm_header_template_text,
+                    gemm_header_tmp_path,
+                    gemm_header_out_path,
+                    s,
                 )
                 _status("算子构建完成")
             else:
