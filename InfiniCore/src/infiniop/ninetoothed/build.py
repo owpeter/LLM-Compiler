@@ -136,6 +136,9 @@ def _make(premake, combination, caller, op_name, output_dir, num_warps, num_stag
     arrangement, application, tensors = premake(**combination)
 
     for param_name, param_value in combination.items():
+        if isinstance(param_value, bool):
+            combination[param_name] = int(param_value)
+            continue
         if isinstance(param_value, str):
             combination[param_name] = (
                 f"INFINI_DTYPE_{combination[param_name].replace('fp', 'F').upper()}"

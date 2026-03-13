@@ -97,26 +97,29 @@ public:
 
         auto y_nt{::ninetoothed::Tensor(y, y_shape_, y_strides_)};
         auto x_nt{::ninetoothed::Tensor(x, x_shape_, x_strides_)};
-        auto pos_ids_nt{::ninetoothed::Tensor(pos_ids, pos_ids_shape_, pos_ids_strides_)};
         auto sin_table_nt{::ninetoothed::Tensor(sin_table, sin_table_shape_, sin_table_strides_)};
         auto cos_table_nt{::ninetoothed::Tensor(cos_table, cos_table_shape_, cos_table_strides_)};
 
         const bool preferred_interleaved =
             (algo_ == infiniopRoPEAlgo_t::INFINIOP_ROPE_ALGO_GPT_J);
 
-        // Prefer matching algo; if no kernel matches (e.g. build filtered), try the other variant.
+        int ndim = y_shape_.size();
+        int emb_dim = y_shape_.back();
+        int dtype = static_cast<int>(dtype_);
+
         for (int attempt = 0; attempt < 2; ++attempt) {
             const bool interleaved_value =
                 (attempt == 0) ? preferred_interleaved : !preferred_interleaved;
 
-            ::ninetoothed::Tensor<bool> interleaved_tensor{interleaved_value};
             if (launch_rope(stream,
-                            y_nt,
                             x_nt,
-                            pos_ids_nt,
                             sin_table_nt,
                             cos_table_nt,
-                            interleaved_tensor)) {
+                            y_nt,
+                            ndim,
+                            emb_dim,
+                            dtype,
+                            interleaved_value) == 0) {
                 return INFINI_STATUS_SUCCESS;
             }
         }
@@ -130,16 +133,30 @@ public:
     }
 
 private:
-    std::vector<size_t> y_shape_;
-    std::vector<size_t> y_strides_;
-    std::vector<size_t> x_shape_;
-    std::vector<size_t> x_strides_;
-    std::vector<size_t> pos_ids_shape_;
-    std::vector<size_t> pos_ids_strides_;
-    std::vector<size_t> sin_table_shape_;
-    std::vector<size_t> sin_table_strides_;
-    std::vector<size_t> cos_table_shape_;
-    std::vector<size_t> cos_table_strides_;
+    static bool dispatchDebugEnabled() {
+        const char *value = std::getenv("INFINI_ROPE_DISPATCH_DEBUG");
+        return value != nullptr && value[0] != '0';
+    }
+    static void dispatchLog(const char *reason) {
+        if (!dispatchDebugEnabled()) {
+            return;
+        }
+        std::fprintf(stderr, "[infiniop][rope] ninetoothed fallback=%s\n", reason);
+    }
+
+    using Size = ::ninetoothed::Tensor<>::Size;
+    using Stride = ::ninetoothed::Tensor<>::Stride;
+
+    std::vector<Size> y_shape_;
+    std::vector<Stride> y_strides_;
+    std::vector<Size> x_shape_;
+    std::vector<Stride> x_strides_;
+    std::vector<Size> pos_ids_shape_;
+    std::vector<Stride> pos_ids_strides_;
+    std::vector<Size> sin_table_shape_;
+    std::vector<Stride> sin_table_strides_;
+    std::vector<Size> cos_table_shape_;
+    std::vector<Stride> cos_table_strides_;
     infiniDtype_t dtype_;
     infiniopRoPEAlgo_t algo_;
 #ifdef ENABLE_NVIDIA_API

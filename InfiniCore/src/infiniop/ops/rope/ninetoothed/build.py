@@ -7,7 +7,7 @@ import infiniop.ninetoothed.build
 def build(
     dtype_values=None,
     ndim_values=(4,),
-    emb_dim_values=(32, 64, 128),
+    emb_dim_values=(64,),
     interleaved_values=(True, False),
     num_warps=4,
     num_stages=2,
