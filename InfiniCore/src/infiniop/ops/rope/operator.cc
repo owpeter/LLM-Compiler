@@ -2,6 +2,9 @@
 #include "../../handle.h"
 #include "infiniop/ops/rope.h"
 
+#ifdef ENABLE_NINETOOTHED
+#include "ninetoothed/rope.h"
+#endif
 #ifdef ENABLE_CPU_API
 #include "cpu/rope_cpu.h"
 #endif
@@ -51,7 +54,11 @@ __C infiniStatus_t infiniopCreateRoPEDescriptor(
         CREATE(INFINI_DEVICE_CPU, cpu);
 #endif
 #ifdef ENABLE_NVIDIA_API
+#ifdef ENABLE_NINETOOTHED
+        CREATE(INFINI_DEVICE_NVIDIA, ninetoothed);
+#else
         CREATE(INFINI_DEVICE_NVIDIA, nvidia);
+#endif
 #endif
 #ifdef ENABLE_ILUVATAR_API
         CREATE(INFINI_DEVICE_ILUVATAR, nvidia);
@@ -99,7 +106,11 @@ __C infiniStatus_t infiniopGetRoPEWorkspaceSize(infiniopRoPEDescriptor_t desc,
         GET(INFINI_DEVICE_CPU, cpu);
 #endif
 #ifdef ENABLE_NVIDIA_API
+#ifdef ENABLE_NINETOOTHED
+        GET(INFINI_DEVICE_NVIDIA, ninetoothed);
+#else
         GET(INFINI_DEVICE_NVIDIA, nvidia);
+#endif
 #endif
 #ifdef ENABLE_ILUVATAR_API
         GET(INFINI_DEVICE_ILUVATAR, nvidia);
@@ -156,7 +167,11 @@ __C infiniStatus_t infiniopRoPE(
         CALCULATE(INFINI_DEVICE_CPU, cpu);
 #endif
 #ifdef ENABLE_NVIDIA_API
+#ifdef ENABLE_NINETOOTHED
+        CALCULATE(INFINI_DEVICE_NVIDIA, ninetoothed);
+#else
         CALCULATE(INFINI_DEVICE_NVIDIA, nvidia);
+#endif
 #endif
 #ifdef ENABLE_ILUVATAR_API
         CALCULATE(INFINI_DEVICE_ILUVATAR, nvidia);
@@ -205,7 +220,11 @@ infiniopDestroyRoPEDescriptor(infiniopRoPEDescriptor_t desc) {
         DELETE(INFINI_DEVICE_CPU, cpu);
 #endif
 #ifdef ENABLE_NVIDIA_API
+#ifdef ENABLE_NINETOOTHED
+        DELETE(INFINI_DEVICE_NVIDIA, ninetoothed);
+#else
         DELETE(INFINI_DEVICE_NVIDIA, nvidia);
+#endif
 #endif
 #ifdef ENABLE_ILUVATAR_API
         DELETE(INFINI_DEVICE_ILUVATAR, nvidia);
