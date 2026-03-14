@@ -2,7 +2,7 @@
 #include "../../handle.h"
 #include "infiniop/ops/rope.h"
 
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_ROPE))
 #include "ninetoothed/rope.h"
 #endif
 #ifdef ENABLE_CPU_API
@@ -54,7 +54,7 @@ __C infiniStatus_t infiniopCreateRoPEDescriptor(
         CREATE(INFINI_DEVICE_CPU, cpu);
 #endif
 #ifdef ENABLE_NVIDIA_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_ROPE))
         CREATE(INFINI_DEVICE_NVIDIA, ninetoothed);
 #else
         CREATE(INFINI_DEVICE_NVIDIA, nvidia);
@@ -106,7 +106,7 @@ __C infiniStatus_t infiniopGetRoPEWorkspaceSize(infiniopRoPEDescriptor_t desc,
         GET(INFINI_DEVICE_CPU, cpu);
 #endif
 #ifdef ENABLE_NVIDIA_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_ROPE))
         GET(INFINI_DEVICE_NVIDIA, ninetoothed);
 #else
         GET(INFINI_DEVICE_NVIDIA, nvidia);
@@ -167,7 +167,7 @@ __C infiniStatus_t infiniopRoPE(
         CALCULATE(INFINI_DEVICE_CPU, cpu);
 #endif
 #ifdef ENABLE_NVIDIA_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_ROPE))
         CALCULATE(INFINI_DEVICE_NVIDIA, ninetoothed);
 #else
         CALCULATE(INFINI_DEVICE_NVIDIA, nvidia);
@@ -220,7 +220,7 @@ infiniopDestroyRoPEDescriptor(infiniopRoPEDescriptor_t desc) {
         DELETE(INFINI_DEVICE_CPU, cpu);
 #endif
 #ifdef ENABLE_NVIDIA_API
-#ifdef ENABLE_NINETOOTHED
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_ROPE))
         DELETE(INFINI_DEVICE_NVIDIA, ninetoothed);
 #else
         DELETE(INFINI_DEVICE_NVIDIA, nvidia);

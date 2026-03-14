@@ -1,3 +1,5 @@
+import functools
+
 import ninetoothed
 from ntops.kernels import rms_norm
 
@@ -11,12 +13,13 @@ def build(
     block_size_values=(128,),
     num_warps=4,
     num_stages=2,
+    use_vectorized_application=False,
 ):
     if dtype_values is None:
         dtype_values = (
             ninetoothed.float16,
-            ninetoothed.bfloat16,
-            ninetoothed.float32,
+            # ninetoothed.bfloat16,
+            # ninetoothed.float32,
         )
 
     constexpr_param_grid = {
@@ -29,7 +32,9 @@ def build(
     }
 
     infiniop.ninetoothed.build.build(
-        rms_norm.premake,
+        functools.partial(
+            rms_norm.premake, use_vectorized_application=use_vectorized_application
+        ),
         constexpr_param_grid,
         caller="cuda",
         op_name="rms_norm",

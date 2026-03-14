@@ -14,10 +14,24 @@ def application(input, weight, eps, output, num_normalized_elements):
         input_i = ntl.cast(input[i], ntl.float32)
         _rms += input_i * input_i
 
-    rms = ntl.sqrt(ntl.sum(_rms) / num_normalized_elements + eps)
+    inv_rms = ntl.rsqrt(ntl.sum(_rms) / num_normalized_elements + eps)
 
     for i in range(input.shape[0]):
-        output[i] = input[i] / rms * weight[i]
+        output[i] = input[i] * inv_rms * weight[i]
+
+
+def vectorized_application(input, weight, eps, output, num_normalized_elements):
+    _rms = ntl.zeros(input.dtype.shape, dtype=ntl.float32)
+
+    for i in range(input.shape[0]):
+        input_i = ntl.cast(input[i], ntl.float32)
+        _rms += input_i * input_i
+        output[i] = input[i] * weight[i]
+
+    inv_rms = ntl.rsqrt(ntl.sum(_rms) / num_normalized_elements + eps)
+
+    for i in range(input.shape[0]):
+        output[i] = output[i] * inv_rms
 
 
 def premake(
@@ -27,6 +41,7 @@ def premake(
     weight_dtype=None,
     output_dtype=None,
     block_size=None,
+    use_vectorized_application=False,
 ):
     dims = tuple(-(dim + 1) for dim in range(num_normalized_dims))
 
@@ -40,4 +55,6 @@ def premake(
         Tensor(0, dtype=ninetoothed.int64),
     )
 
-    return arrangement_, application, tensors
+    application_ = vectorized_application if use_vectorized_application else application
+
+    return arrangement_, application_, tensors

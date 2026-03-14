@@ -94,7 +94,7 @@ public:
 
         int num_normalized_dims = 1;
         
-        static constexpr int block_sizes[] = {128, 256, 512, 1024, 2048, 4096};
+        static constexpr int block_sizes[] = {32, 64, 128, 256};
         
         for (auto block_size : block_sizes) {
              if (launch_rms_norm(stream,

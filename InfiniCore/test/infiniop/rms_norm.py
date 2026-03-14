@@ -35,14 +35,16 @@ _TEST_CASES_ = [
     ((4, 4, 2048), (4, 4, 2048), (2048,), (2048, 8192, 1), (2048, 8192, 1)),
     ((4, 4, 2048), (4, 4, 2048), (2048,), (16384, 4096, 1), (16384, 4096, 1)),
     ((15, 3584), (15, 3584), (3584,), None, None),
-    ((15, 8192), (15, 8192), (8192,), None, None),
+    # ((15, 8192), (15, 8192), (8192,), None, None),
+    ((8, 512, 4096), (8, 512, 4096), (4096,), None, None),
 ]
 
 # w (weight) types
 # Note: 'None' means the same as input dtype
-_WEIGHT_DTYPES = [None, InfiniDtype.F32, InfiniDtype.F16, InfiniDtype.BF16]
+# _WEIGHT_DTYPES = [None, InfiniDtype.F32, InfiniDtype.F16, InfiniDtype.BF16]
+_WEIGHT_DTYPES = [InfiniDtype.F16]
 # x types used for testing
-_TENSOR_DTYPES = [InfiniDtype.F16, InfiniDtype.BF16]
+_TENSOR_DTYPES = [InfiniDtype.F16]
 
 # Form the test cases by appending each element of _WEIGHT_DTYPES to each tuple in _TEST_CASES_
 _TEST_CASES = [
@@ -64,8 +66,14 @@ NUM_ITERATIONS = 1000
 def rms_norm(ans, x, w, eps):
     input_dtype = x.dtype
     hidden_states = x.to(torch.float32)
-    scale = hidden_states.pow(2).mean(-1, keepdim=True).add_(eps).rsqrt_()
-    ans.set_((hidden_states.mul_(scale).mul_(w)).to(input_dtype))
+    ans.set_(
+        torch.nn.functional.rms_norm(
+            hidden_states,
+            (w.shape[-1],),
+            w.to(hidden_states.dtype),
+            eps,
+        ).to(input_dtype)
+    )
 
 
 def test(

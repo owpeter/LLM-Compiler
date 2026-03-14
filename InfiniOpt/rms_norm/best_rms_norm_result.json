@@ -1,0 +1,17 @@
+{
+  "hardware": "NVIDIA 4090",
+  "workload": {
+    "batch_size": 8,
+    "sequence_length": 512,
+    "hidden_size": 4096,
+    "type": "prefill"
+  },
+  "iterations": 20,
+  "best_score": 2.307003974914551,
+  "best_schedule": {
+    "block_size_value": 256,
+    "num_warps": 4,
+    "num_stages": 3,
+    "use_vectorized_application": true
+  }
+}
