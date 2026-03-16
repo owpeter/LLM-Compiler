@@ -1,0 +1,73 @@
+schedule:
+  dtype:
+    - float16
+    # - bfloat16
+  block_m:
+    - 32
+    - 64
+    - 128
+    - 256
+  block_n:
+    - 32
+    - 64
+    - 128
+    - 256
+  num_warps:
+    - 2
+    - 4
+    - 8
+  num_stages:
+    - 2
+    - 3
+    - 4
+    - 5
+workload:
+  # 说明:
+  # 1) head_dim 建议与当前已编译 kernel 保持一致 (64/128)
+  # 2) 运行时需满足 total_kv_len <= kv_len_buffer
+  prefill:
+    batch:
+      - 1
+    num_heads:
+      - 8
+      - 16
+      - 32
+    q_len:
+      - 128
+      - 512
+      - 2048
+    kv_len_buffer:
+      - 4096
+    total_kv_len:
+      - 512
+      - 2048
+      - 4096
+    head_dim:
+      - 64
+      - 128
+    is_causal:
+      - true
+
+  decode:
+    batch:
+      - 1
+    num_heads:
+      - 8
+      - 16
+      - 32
+    q_len:
+      - 1
+      - 2
+      - 4
+    kv_len_buffer:
+      - 16384
+    total_kv_len:
+      - 512
+      - 2048
+      - 8192
+      - 16384
+    head_dim:
+      - 64
+    is_causal:
+      - true
+      - false

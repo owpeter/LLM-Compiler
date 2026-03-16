@@ -4,7 +4,7 @@ from .structs import (
     infiniopOperatorDescriptor_t,
 )
 
-from ctypes import c_int32, c_void_p, c_size_t, POINTER, c_float
+from ctypes import c_int32, c_int8, c_void_p, c_size_t, POINTER, c_float
 
 
 class OpRegister:
@@ -92,6 +92,55 @@ def attention_(lib):
 
     lib.infiniopDestroyAttentionDescriptor.restype = c_int32
     lib.infiniopDestroyAttentionDescriptor.argtypes = [
+        infiniopOperatorDescriptor_t,
+    ]
+
+
+@OpRegister.operator
+def flash_attention_(lib):
+    required_symbols = (
+        "infiniopCreateFlashAttentionDescriptor",
+        "infiniopGetFlashAttentionWorkspaceSize",
+        "infiniopFlashAttention",
+        "infiniopDestroyFlashAttentionDescriptor",
+    )
+    if not all(hasattr(lib, symbol) for symbol in required_symbols):
+        return
+
+    lib.infiniopCreateFlashAttentionDescriptor.restype = c_int32
+    lib.infiniopCreateFlashAttentionDescriptor.argtypes = [
+        infiniopHandle_t,
+        POINTER(infiniopOperatorDescriptor_t),
+        infiniopTensorDescriptor_t,
+        infiniopTensorDescriptor_t,
+        infiniopTensorDescriptor_t,
+        infiniopTensorDescriptor_t,
+        infiniopTensorDescriptor_t,
+        c_float,
+        c_int8,
+    ]
+
+    lib.infiniopGetFlashAttentionWorkspaceSize.restype = c_int32
+    lib.infiniopGetFlashAttentionWorkspaceSize.argtypes = [
+        infiniopOperatorDescriptor_t,
+        POINTER(c_size_t),
+    ]
+
+    lib.infiniopFlashAttention.restype = c_int32
+    lib.infiniopFlashAttention.argtypes = [
+        infiniopOperatorDescriptor_t,
+        c_void_p,
+        c_size_t,
+        c_void_p,
+        c_void_p,
+        c_void_p,
+        c_void_p,
+        c_void_p,
+        c_void_p,
+    ]
+
+    lib.infiniopDestroyFlashAttentionDescriptor.restype = c_int32
+    lib.infiniopDestroyFlashAttentionDescriptor.argtypes = [
         infiniopOperatorDescriptor_t,
     ]
 

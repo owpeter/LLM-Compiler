@@ -445,6 +445,15 @@ def get_args():
 def synchronize_device(torch_device):
     import torch
 
+    # Infinicore and PyTorch may use different runtime streams/contexts.
+    # Sync both runtimes to avoid under-reporting async kernel execution.
+    if torch_device != "cpu":
+        try:
+            if hasattr(LIBINFINIOP, "infinirtDeviceSynchronize"):
+                check_error(LIBINFINIOP.infinirtDeviceSynchronize())
+        except Exception:
+            pass
+
     if torch_device == "cuda":
         torch.cuda.synchronize()
     elif torch_device == "npu":

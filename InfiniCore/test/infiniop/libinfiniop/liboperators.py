@@ -71,6 +71,9 @@ def open_lib():
     lib.infiniopDestroyHandle.restype = c_int
     lib.infinirtSetDevice.argtypes = [c_int, c_int]
     lib.infinirtSetDevice.restype = c_int
+    if hasattr(lib, "infinirtDeviceSynchronize"):
+        lib.infinirtDeviceSynchronize.argtypes = []
+        lib.infinirtDeviceSynchronize.restype = c_int
 
     OpRegister.register_lib(lib)
 
