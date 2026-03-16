@@ -22,6 +22,8 @@ def arrangement(
     output,
     input_precision,
     unroll,
+    beta,
+    has_bias,
     block_size_m=None,
     block_size_n=None,
     block_size_k=None,
@@ -49,12 +51,24 @@ def arrangement(
 
     input_precision_arranged = input_precision
     unroll_arranged = unroll
+    beta_arranged = beta
+    has_bias_arranged = has_bias
 
-    return input_arranged, other_arranged, output_arranged, input_precision_arranged, unroll_arranged
+    return (
+        input_arranged,
+        other_arranged,
+        output_arranged,
+        input_precision_arranged,
+        unroll_arranged,
+        beta_arranged,
+        has_bias_arranged,
+    )
 
 
-def application(input, other, output, input_precision, unroll):
+def application(input, other, output, input_precision, unroll, beta, has_bias):
     accumulator = ntl.zeros(output.shape, dtype=ntl.float32)
+    if has_bias == 1:
+        accumulator += ntl.cast(beta, ntl.float32) * ntl.cast(output, ntl.float32)
 
     if input_precision == 2:  # InputPrecisionVariant.IEEE:
         input_precision_: ntl.constexpr = "ieee"
@@ -78,6 +92,7 @@ def premake(
     input_precision=None,
     dtype=None,
     unroll=1,
+    has_bias=None,
     block_size_m=None,
     block_size_n=None,
     block_size_k=None,
@@ -95,6 +110,8 @@ def premake(
         Tensor(2, dtype=dtype),
         Tensor(0, constexpr=True, value=input_precision),
         Tensor(0, constexpr=True, value=unroll),
+        Tensor(0, dtype=ninetoothed.float64),
+        Tensor(0, constexpr=True, value=has_bias),
     )
 
     return arrangement_, application, tensors

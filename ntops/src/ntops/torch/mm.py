@@ -13,6 +13,7 @@ def mm(input, mat2, *, out=None):
 
     kernel = _cached_make(ntops.kernels.mm.premake)
 
-    kernel(input, mat2, out, _get_matmul_input_precision(), 1)
+    # beta=0 and has_bias=0 keeps old mm semantics.
+    kernel(input, mat2, out, _get_matmul_input_precision(), 1, 0.0, 0)
 
     return out
