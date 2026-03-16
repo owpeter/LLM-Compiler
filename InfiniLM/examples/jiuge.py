@@ -1,19 +1,20 @@
-import infinicore
-import transformers
-from transformers import AutoTokenizer
-from tokenizers import decoders as _dec
-from infinilm.modeling_utils import load_model_state_dict_by_file
-from infinilm.distributed import DistConfig
-from infinilm.infer_engine import GenerationConfig, InferEngine
-import argparse
-import sys
-import time
 import os
-import numpy as np
-from infinilm.cache import StaticKVCacheConfig, PagedKVCacheConfig
-from packaging import version
+import sys
+import argparse
+import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../python"))
+
+import infinicore
+import numpy as np
+import transformers
+from packaging import version
+from tokenizers import decoders as _dec
+from transformers import AutoTokenizer
+from infinilm.cache import StaticKVCacheConfig, PagedKVCacheConfig
+from infinilm.distributed import DistConfig
+from infinilm.infer_engine import GenerationConfig, InferEngine
+from infinilm.modeling_utils import load_model_state_dict_by_file
 
 
 def get_args():

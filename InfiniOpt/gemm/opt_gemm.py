@@ -19,14 +19,14 @@ except ImportError:
     sys.exit(1)
 
 # Constants
-GEMM_YAML_PATH = "/root/LLM-Compiler/InfiniCore/scripts/profile/gemm.yaml"
+GEMM_YAML_PATH = "LLM-Compiler/InfiniCore/scripts/profile/gemm/gemm.yaml"
 MODEL_PATH = os.path.join(gemm_xgboost_dir, "xgboost_model.json")
 META_PATH = os.path.join(gemm_xgboost_dir, "xgboost_model_meta.json")
 HARDWARE_NAME = "NVIDIA 4090"  # Placeholder
 WORK_LOAD = {
     "m": 512, 
     "n": 1024, 
-    "k": 1024, 
+    "k": 2048, 
 }
 
 class Node:

@@ -63,7 +63,7 @@ NUM_PRERUN = 10
 NUM_ITERATIONS = 1000
 
 
-def rms_norm(ans, x, w, eps):
+def rms_norm_reference(ans, x, w, eps):
     input_dtype = x.dtype
     hidden_states = x.to(torch.float32)
     ans.set_(
@@ -74,6 +74,10 @@ def rms_norm(ans, x, w, eps):
             eps,
         ).to(input_dtype)
     )
+
+
+def rms_norm_profile(x, w, eps):
+    return torch.nn.functional.rms_norm(x, (w.shape[-1],), w, eps)
 
 
 def test(
@@ -99,7 +103,7 @@ def test(
     w = TestTensor(w_shape, None, w_dtype, device)
 
     eps = 1e-6
-    rms_norm(y.torch_tensor(), x.torch_tensor(), w.torch_tensor(), eps)
+    rms_norm_reference(y.torch_tensor(), x.actual_tensor(), w.actual_tensor(), eps)
 
     if sync is not None:
         sync()
@@ -151,8 +155,11 @@ def test(
 
     # Profiling workflow
     if PROFILE:
+        x_profile = x.actual_tensor()
+        w_profile = w.actual_tensor()
+
         # fmt: off
-        profile_operation("PyTorch", lambda: rms_norm(y.torch_tensor(), x.torch_tensor(), w.torch_tensor(), eps), device, NUM_PRERUN, NUM_ITERATIONS)
+        profile_operation("PyTorch", lambda: rms_norm_profile(x_profile, w_profile, eps), device, NUM_PRERUN, NUM_ITERATIONS)
         profile_operation("    lib", lambda: lib_rms_norm(), device, NUM_PRERUN, NUM_ITERATIONS)
         # fmt: on
     check_error(LIBINFINIOP.infiniopDestroyRMSNormDescriptor(descriptor))

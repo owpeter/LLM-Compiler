@@ -75,7 +75,7 @@ public:
         const void *b,
         float alpha,
         void *stream) const {
-        if (alpha != 1.0f || beta != 0.0f || a_shape_.size() != 2 || b_shape_.size() != 2 || c_shape_.size() != 2) {
+        if (alpha != 1.0f || a_shape_.size() != 2 || b_shape_.size() != 2 || c_shape_.size() != 2) {
             dispatchLog("param_mismatch");
 #ifdef ENABLE_NVIDIA_API
             return fallback_->calculate(workspace, workspace_size, c, beta, a, b, alpha, stream);
@@ -87,32 +87,45 @@ public:
         auto c_nt{::ninetoothed::Tensor(c, c_shape_, c_strides_)};
         auto a_nt{::ninetoothed::Tensor(a, a_shape_, a_strides_)};
         auto b_nt{::ninetoothed::Tensor(b, b_shape_, b_strides_)};
+        ::ninetoothed::Tensor<double> beta_tensor{static_cast<double>(beta)};
 
         static constexpr int input_precision_values[] = {1, 2};
         // todo: change values by reading config file
         static constexpr int block_size_values[][3] = {
-            {32, 16, 256},
+            {128, 128, 256},
         };
-        static constexpr int unroll_values[] = {2};
+        static constexpr int unroll_values[] = {4};
+        static constexpr int has_bias_values[] = {0, 1};
+
+        int expected_has_bias = (beta == 0.0f) ? 0 : 1;
 
         for (auto input_precision_value : input_precision_values) {
             ::ninetoothed::Tensor<int> input_precision_tensor{input_precision_value};
             for (const auto &block_size : block_size_values) {
                 for (auto unroll_value : unroll_values) {
                     ::ninetoothed::Tensor<int> unroll_tensor{unroll_value};
-                    if (launch_gemm(stream,
-                                    a_nt,
-                                    b_nt,
-                                    c_nt,
-                                    input_precision_tensor,
-                                    unroll_tensor,
-                                    dtype_,
-                                    input_precision_value,
-                                    block_size[0],
-                                    block_size[1],
-                                    block_size[2],
-                                    unroll_value) == 0) {
-                        return INFINI_STATUS_SUCCESS;
+                    for (auto has_bias_value : has_bias_values) {
+                        if (has_bias_value != expected_has_bias) {
+                            continue;
+                        }
+                        ::ninetoothed::Tensor<int> has_bias_tensor{has_bias_value};
+                        if (launch_gemm(stream,
+                                        a_nt,
+                                        b_nt,
+                                        c_nt,
+                                        input_precision_tensor,
+                                        unroll_tensor,
+                                        beta_tensor,
+                                        has_bias_tensor,
+                                        dtype_,
+                                        input_precision_value,
+                                        block_size[0],
+                                        block_size[1],
+                                        block_size[2],
+                                        unroll_value,
+                                        has_bias_value) == 0) {
+                            return INFINI_STATUS_SUCCESS;
+                        }
                     }
                 }
             }

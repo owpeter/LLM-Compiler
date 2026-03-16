@@ -104,12 +104,13 @@ def build_gemm(
     ninetoothed_path: str = "",
     dtype: str | None = None,
     input_precision: str | None = None,
-    block_m: str = "256",
+    block_m: str = "128",
     block_n: str = "128",
-    block_k: str = "64",
+    block_k: str = "256",
     unroll: str = "4",
-    num_warps: int = 4,
-    num_stages: int = 2,
+    has_bias: str = "1",
+    num_warps: int = 8,
+    num_stages: int = 3,
     skip_cleanup: bool = False,
 ):
     """
@@ -124,6 +125,7 @@ def build_gemm(
         block_n: block_size_n_values (逗号分隔)
         block_k: block_size_k_values (逗号分隔)
         unroll: unroll_values (逗号分隔)
+        has_bias: has_bias_values (逗号分隔，取值 0/1)
         num_warps: num_warps
         num_stages: num_stages
         skip_cleanup: 是否跳过清理 build 目录下的 gemm* 文件
@@ -175,15 +177,19 @@ def build_gemm(
     block_size_n_values = tuple(int(v.strip()) for v in block_n.split(","))
     block_size_k_values = tuple(int(v.strip()) for v in block_k.split(","))
     unroll_values = tuple(int(v.strip()) for v in unroll.split(","))
+    has_bias_values = tuple(int(v.strip()) for v in has_bias.split(","))
+    if any(v not in (0, 1) for v in has_bias_values):
+        raise ValueError("--has-bias 仅支持 0/1，例如: --has-bias 0,1")
 
-    print(f"开始构建 GEMM...")
-    print(f"参数: ")
+    print("开始构建 GEMM...")
+    print("参数: ")
     print(f"  dtype_values: {dtype_values}")
     print(f"  input_precision_values: {input_precision_values}")
     print(f"  block_size_m_values: {block_size_m_values}")
     print(f"  block_size_n_values: {block_size_n_values}")
     print(f"  block_size_k_values: {block_size_k_values}")
     print(f"  unroll_values: {unroll_values}")
+    print(f"  has_bias_values: {has_bias_values}")
     print(f"  num_warps: {num_warps}")
     print(f"  num_stages: {num_stages}")
 
@@ -194,6 +200,7 @@ def build_gemm(
         block_size_n_values=block_size_n_values,
         block_size_k_values=block_size_k_values,
         unroll_values=unroll_values,
+        has_bias_values=has_bias_values,
         num_warps=num_warps,
         num_stages=num_stages,
     )
@@ -216,10 +223,11 @@ def main():
     )
     parser.add_argument("--block-m", default="128", help="block_size_m_values (逗号分隔)")
     parser.add_argument("--block-n", default="128", help="block_size_n_values (逗号分隔)")
-    parser.add_argument("--block-k", default="32", help="block_size_k_values (逗号分隔)")
+    parser.add_argument("--block-k", default="256", help="block_size_k_values (逗号分隔)")
     parser.add_argument("--unroll", default="4", help="unroll_values (逗号分隔)")
-    parser.add_argument("--num-warps", type=int, default=4, help="num_warps")
-    parser.add_argument("--num-stages", type=int, default=2, help="num_stages")
+    parser.add_argument("--has-bias", default="1", help="has_bias_values (逗号分隔，0/1)")
+    parser.add_argument("--num-warps", type=int, default=8, help="num_warps")
+    parser.add_argument("--num-stages", type=int, default=3, help="num_stages")
     parser.add_argument("--skip-cleanup", action="store_true", help="跳过清理旧的 gemm* 文件")
 
     args = parser.parse_args()
@@ -234,6 +242,7 @@ def main():
         block_n=args.block_n,
         block_k=args.block_k,
         unroll=args.unroll,
+        has_bias=args.has_bias,
         num_warps=args.num_warps,
         num_stages=args.num_stages,
         skip_cleanup=args.skip_cleanup,

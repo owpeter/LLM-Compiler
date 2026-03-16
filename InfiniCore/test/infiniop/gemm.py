@@ -23,17 +23,31 @@ from libinfiniop import (
 # ==============================================================================
 # These are not meant to be imported from other modules
 _TEST_CASES = [
+    # Llama2-like linear GEMM cases (flattened N = bs * seq_len)
     # alpha, beta, a_shape, b_shape, c_shape, a_stride, b_stride, c_stride
-    # (1.0, 0.0, (128, 128), (128, 128), (128, 128), None, None, None),
-    # (1.0, 0.0, (256, 128), (128, 256), (256, 256), None, None, None),
-    # (1.0, 0.0, (1024, 2048), (2048, 512), (1024, 512), None, None, None),
-    (1.0, 0.0, (512, 4096), (4096, 1024), (512, 1024), None, None, None),
+
+    # ---- Prefill phase (e.g., bs=1, seq=128 => N=128) ----
+    # Q/K/V projection: [N, hidden] x [hidden, hidden] -> [N, hidden]
+    (1.0, 0.0, (128, 4096), (4096, 4096), (128, 4096), None, None, None),
+    # Q/K/V projection with bias already materialized in C (beta=1 path)
+    (1.0, 1.0, (128, 4096), (4096, 4096), (128, 4096), None, None, None),
+
+    # MLP up/gate projection: [N, hidden] x [hidden, intermediate] -> [N, intermediate]
+    (1.0, 0.0, (128, 4096), (4096, 11008), (128, 11008), None, None, None),
+    # MLP down projection: [N, intermediate] x [intermediate, hidden] -> [N, hidden]
+    (1.0, 0.0, (128, 11008), (11008, 4096), (128, 4096), None, None, None),
+
+    # ---- Decode phase (e.g., bs=1, seq=1 => N=1) ----
+    # Attention/MLP projections at single-token step
+    (1.0, 0.0, (1, 4096), (4096, 4096), (1, 4096), None, None, None),
+    # LM head: [N, hidden] x [hidden, vocab] -> [N, vocab]
+    (1.0, 0.0, (1, 4096), (4096, 32000), (1, 32000), None, None, None),
 ]
 
 # Data types used for testing
 _TENSOR_DTYPES = [
-    InfiniDtype.F16, 
-    # InfiniDtype.BF16, 
+    InfiniDtype.F16,
+    # InfiniDtype.BF16,
     # InfiniDtype.F32,
 ]
 

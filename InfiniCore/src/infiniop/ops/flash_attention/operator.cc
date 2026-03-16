@@ -2,7 +2,7 @@
 #include "../../handle.h"
 #include "infiniop/ops/flash_attention.h"
 
-#if defined(ENABLE_NINETOOTHED)
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_FLASH_ATTENTION))
 #if defined(ENABLE_NVIDIA_API)
 #include "ninetoothed/descriptor.h"
 #endif
@@ -34,7 +34,7 @@ __C __export infiniStatus_t infiniopCreateFlashAttentionDescriptor(
 
     switch (handle->device) {
 
-#if defined(ENABLE_NINETOOTHED)
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_FLASH_ATTENTION))
 #if defined(ENABLE_NVIDIA_API)
         CREATE(INFINI_DEVICE_NVIDIA, ninetoothed);
 #endif
@@ -57,7 +57,7 @@ __C __export infiniStatus_t infiniopGetFlashAttentionWorkspaceSize(
 
     switch (desc->device_type) {
 
-#if defined(ENABLE_NINETOOTHED)
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_FLASH_ATTENTION))
 #if defined(ENABLE_NVIDIA_API)
         GET_SIZE(INFINI_DEVICE_NVIDIA, ninetoothed);
 #endif
@@ -87,7 +87,7 @@ __C __export infiniStatus_t infiniopFlashAttention(
 
     switch (desc->device_type) {
 
-#if defined(ENABLE_NINETOOTHED)
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_FLASH_ATTENTION))
 #if defined(ENABLE_NVIDIA_API)
         CALCULATE(INFINI_DEVICE_NVIDIA, ninetoothed);
 #endif
@@ -109,7 +109,7 @@ __C __export infiniStatus_t infiniopDestroyFlashAttentionDescriptor(
 
     switch (desc->device_type) {
 
-#if defined(ENABLE_NINETOOTHED)
+#if defined(ENABLE_NINETOOTHED) && (defined(ENABLE_NINETOOTHED_ALL_OPS) || defined(ENABLE_NINETOOTHED_OP_FLASH_ATTENTION))
 #if defined(ENABLE_NVIDIA_API)
         DESTROY(INFINI_DEVICE_NVIDIA, ninetoothed);
 #endif

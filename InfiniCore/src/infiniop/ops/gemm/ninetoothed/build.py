@@ -11,6 +11,7 @@ def build(
     block_size_n_values=(128,),
     block_size_k_values=(64,),
     unroll_values=(1,),
+    has_bias_values=(0, 1),
     num_warps=1,
     num_stages=2,
 ):
@@ -35,6 +36,7 @@ def build(
         "block_size_n": block_size_n_values,
         "block_size_k": block_size_k_values,
         "unroll": unroll_values,
+        "has_bias": has_bias_values,
     }
 
     infiniop.ninetoothed.build.build(

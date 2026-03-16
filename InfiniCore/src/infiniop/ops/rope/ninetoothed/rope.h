@@ -86,7 +86,7 @@ public:
         const void *sin_table,
         const void *cos_table,
         void *stream) const {
-        if (x_shape_.size() != 4 || y_shape_.size() != 4 || sin_table_shape_.size() != 4 || cos_table_shape_.size() != 4) {
+        if (x_shape_.size() != 4 || y_shape_.size() != 4 || sin_table_shape_.size() != 2 || cos_table_shape_.size() != 2) {
             dispatchLog("param_mismatch");
 #ifdef ENABLE_NVIDIA_API
             return fallback_->calculate(workspace, workspace_size, y, x, pos_ids, sin_table, cos_table, stream);
@@ -97,8 +97,34 @@ public:
 
         auto y_nt{::ninetoothed::Tensor(y, y_shape_, y_strides_)};
         auto x_nt{::ninetoothed::Tensor(x, x_shape_, x_strides_)};
-        auto sin_table_nt{::ninetoothed::Tensor(sin_table, sin_table_shape_, sin_table_strides_)};
-        auto cos_table_nt{::ninetoothed::Tensor(cos_table, cos_table_shape_, cos_table_strides_)};
+        std::vector<Size> sin_table_shape_view = {
+            1,
+            1,
+            sin_table_shape_[0],
+            sin_table_shape_[1],
+        };
+        std::vector<Stride> sin_table_strides_view = {
+            0,
+            0,
+            sin_table_strides_[0],
+            sin_table_strides_[1],
+        };
+        std::vector<Size> cos_table_shape_view = {
+            1,
+            1,
+            cos_table_shape_[0],
+            cos_table_shape_[1],
+        };
+        std::vector<Stride> cos_table_strides_view = {
+            0,
+            0,
+            cos_table_strides_[0],
+            cos_table_strides_[1],
+        };
+        auto sin_table_nt{::ninetoothed::Tensor(
+            sin_table, sin_table_shape_view, sin_table_strides_view)};
+        auto cos_table_nt{::ninetoothed::Tensor(
+            cos_table, cos_table_shape_view, cos_table_strides_view)};
 
         const bool preferred_interleaved =
             (algo_ == infiniopRoPEAlgo_t::INFINIOP_ROPE_ALGO_GPT_J);

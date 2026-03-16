@@ -7,7 +7,7 @@ import infiniop.ninetoothed.build
 def build(
     dtype_values=None,
     ndim_values=(2, 3),
-    block_size_values=(128, 256, 512, 1024),
+    block_size_values=(128,),
 ):
     if dtype_values is None:
         dtype_values = (

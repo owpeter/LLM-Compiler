@@ -12,9 +12,9 @@ def build(
     if dtype_values is None:
         dtype_values = (
             ninetoothed.float16,
-            ninetoothed.bfloat16,
+            # ninetoothed.bfloat16,
             ninetoothed.float32,
-            ninetoothed.float64,
+            # ninetoothed.float64,
         )
 
     constexpr_param_grid = {

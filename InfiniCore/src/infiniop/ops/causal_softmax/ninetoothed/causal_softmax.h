@@ -79,7 +79,7 @@ public:
         auto x_nt{::ninetoothed::Tensor(x, x_shape_, x_strides_)};
 
         int ndim = y_shape_.size();
-        static constexpr int block_sizes[] = {128, 256, 512, 1024};
+        static constexpr int block_sizes[] = {64, 128, 256, 512, 1024};
         for (auto block_size : block_sizes) {
             if (launch_causal_softmax(stream, x_nt, y_nt, ndim, info_.dtype, block_size) == 0) {
                 return INFINI_STATUS_SUCCESS;

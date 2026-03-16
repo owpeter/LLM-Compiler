@@ -1,14 +1,15 @@
-import infinicore
-from transformers import AutoTokenizer
-from tokenizers import decoders as _dec
-from infinilm.modeling_utils import get_model_state_dict
-import infinilm
-import argparse
-import sys
-import time
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../python"))
+
+import argparse
+import time
+import infinicore
+import infinilm
+from tokenizers import decoders as _dec
+from transformers import AutoTokenizer
+from infinilm.modeling_utils import get_model_state_dict
 
 
 def get_args():
