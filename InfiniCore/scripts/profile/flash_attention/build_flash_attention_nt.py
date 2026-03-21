@@ -179,7 +179,7 @@ def main():
         help="causal_variant_values (逗号分隔，可选 UPPER_LEFT/LOWER_RIGHT 或 1/2)",
     )
     parser.add_argument(
-        "--dtype", default="float16", help="数据类型 (逗号分隔，例如 float16,bfloat16)"
+        "--dtype", default="float32", help="数据类型 (逗号分隔，例如 float16,bfloat16)"
     )
     parser.add_argument(
         "--block-size-m", default="32", help="block_size_m_values (逗号分隔)"

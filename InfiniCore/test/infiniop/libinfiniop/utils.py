@@ -1,10 +1,124 @@
 from typing import Sequence
+import atexit
+import csv
+import inspect
+import os
+import re
 import torch
 import ctypes
 import numpy as np
 from .datatypes import *
 from .devices import *
 from .liboperators import infiniopTensorDescriptor_t, LIBINFINIOP, infiniopHandle_t
+
+
+_REPORT_ERROR_STATS = False
+_ERROR_STATS_REGISTERED = False
+_ERROR_STATS_SUM_ABS = 0.0
+_ERROR_STATS_COUNT = 0
+_ERROR_STATS_MAX_ABS = 0.0
+_PROFILE_PENDING_ROWS = {}
+_PROFILE_CURRENT_SHAPE = "unknown"
+
+
+def _reset_error_stats():
+    global _ERROR_STATS_SUM_ABS, _ERROR_STATS_COUNT, _ERROR_STATS_MAX_ABS
+    _ERROR_STATS_SUM_ABS = 0.0
+    _ERROR_STATS_COUNT = 0
+    _ERROR_STATS_MAX_ABS = 0.0
+
+
+def _accumulate_error_stats(actual, expected):
+    global _ERROR_STATS_SUM_ABS, _ERROR_STATS_COUNT, _ERROR_STATS_MAX_ABS
+
+    if actual.shape != expected.shape:
+        return
+
+    actual_f64 = actual.to(dtype=torch.float64)
+    expected_f64 = expected.to(dtype=torch.float64)
+    abs_diff = torch.abs(actual_f64 - expected_f64)
+
+    _ERROR_STATS_SUM_ABS += abs_diff.sum().item()
+    _ERROR_STATS_COUNT += abs_diff.numel()
+    _ERROR_STATS_MAX_ABS = max(_ERROR_STATS_MAX_ABS, abs_diff.max().item())
+
+
+def _print_error_stats_once():
+    if not _REPORT_ERROR_STATS:
+        return
+    if _ERROR_STATS_COUNT == 0:
+        print("\nlib error summary: no valid allclose comparisons were captured")
+        return
+
+    mae = _ERROR_STATS_SUM_ABS / _ERROR_STATS_COUNT
+    print(f"\nlib error summary: MAE={mae:.8e}, Max AE={_ERROR_STATS_MAX_ABS:.8e}")
+
+
+def _normalize_name(name):
+    normalized = re.sub(r"[^0-9a-zA-Z]+", "_", name.strip().lower())
+    return normalized.strip("_") or "unknown"
+
+
+def _resolve_opname_from_caller():
+    frame = inspect.currentframe()
+    if frame is None:
+        return "unknown"
+
+    # Walk up the stack and use the first frame from an infiniop test script.
+    caller = frame.f_back
+    while caller is not None:
+        filename = caller.f_code.co_filename
+        if filename and "test/infiniop/" in filename.replace("\\", "/"):
+            base = os.path.basename(filename)
+            opname, _ = os.path.splitext(base)
+            if opname and opname != "utils":
+                return _normalize_name(opname)
+        caller = caller.f_back
+
+    return "unknown"
+
+
+def _resolve_device_name(device):
+    if isinstance(device, str):
+        return _normalize_name(device)
+
+    try:
+        return _normalize_name(InfiniDeviceNames.get(device, str(device)))
+    except Exception:
+        return _normalize_name(str(device))
+
+
+def _record_profile_timing(desc, elapsed_ms, device, opname):
+    lower_desc = desc.strip().lower()
+    if "pytorch" in lower_desc:
+        role = "pytorch_ms"
+    elif "lib" in lower_desc:
+        role = "lib_ms"
+    else:
+        return
+
+    filename = f"{_normalize_name(device)}_{_normalize_name(opname)}.csv"
+    filepath = os.path.join(os.getcwd(), filename)
+
+    row = _PROFILE_PENDING_ROWS.setdefault(filepath, {})
+    row[role] = elapsed_ms
+    row.setdefault("shape", _PROFILE_CURRENT_SHAPE)
+
+    if "pytorch_ms" in row and "lib_ms" in row:
+        file_exists = os.path.exists(filepath)
+        with open(filepath, "a", newline="") as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(["shape", "pytorch_ms", "lib_ms"])
+            writer.writerow(
+                [
+                    row["shape"],
+                    f"{row['pytorch_ms']:.9f}",
+                    f"{row['lib_ms']:.9f}",
+                ]
+            )
+
+        _PROFILE_PENDING_ROWS[filepath] = {}
 
 
 def check_error(status):
@@ -439,7 +553,20 @@ def get_args():
         help="Run ALI PPU test",
     )
 
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    global _REPORT_ERROR_STATS, _ERROR_STATS_REGISTERED
+    _REPORT_ERROR_STATS = not args.profile
+    _reset_error_stats()
+
+    if args.profile:
+        _PROFILE_PENDING_ROWS.clear()
+
+    if _REPORT_ERROR_STATS and not _ERROR_STATS_REGISTERED:
+        atexit.register(_print_error_stats_once)
+        _ERROR_STATS_REGISTERED = True
+
+    return args
 
 
 def synchronize_device(torch_device):
@@ -687,6 +814,8 @@ def profile_operation(desc, func, torch_device, NUM_PRERUN, NUM_ITERATIONS):
     - NUM_PRERUN (int): The number of warmup runs.
     - NUM_ITERATIONS (int): The number of timed execution iterations, used to calculate the average execution time.
     """
+    op_name = _resolve_opname_from_caller()
+    device_name = _resolve_device_name(torch_device)
     if not isinstance(torch_device, str):
         torch_device = torch_device_map[torch_device]
 
@@ -696,6 +825,7 @@ def profile_operation(desc, func, torch_device, NUM_PRERUN, NUM_ITERATIONS):
     # Timed execution
     elapsed = timed_op(lambda: func(), NUM_ITERATIONS, torch_device)
     print(f" {desc} time: {elapsed * 1000:6f} ms")
+    _record_profile_timing(desc, elapsed * 1000, device_name, op_name)
     return elapsed
 
 
@@ -714,8 +844,21 @@ def test_operator(device, test_func, test_cases, tensor_dtypes):
     LIBINFINIOP.infinirtSetDevice(device, ctypes.c_int(0))
     handle = create_handle()
     tensor_dtypes = filter_tensor_dtypes_by_device(device, tensor_dtypes)
+
+    original_allclose = None
+    if _REPORT_ERROR_STATS:
+        original_allclose = torch.allclose
+
+        def allclose_with_stats(actual, expected, *args, **kwargs):
+            _accumulate_error_stats(actual, expected)
+            return original_allclose(actual, expected, *args, **kwargs)
+
+        torch.allclose = allclose_with_stats
+
     try:
         for test_case in test_cases:
+            global _PROFILE_CURRENT_SHAPE
+            _PROFILE_CURRENT_SHAPE = str(test_case[0]) if len(test_case) > 0 else "unknown"
             for tensor_dtype in tensor_dtypes:
                 test_func(
                     handle,
@@ -725,6 +868,8 @@ def test_operator(device, test_func, test_cases, tensor_dtypes):
                     get_sync_func(device),
                 )
     finally:
+        if original_allclose is not None:
+            torch.allclose = original_allclose
         destroy_handle(handle)
 
 

@@ -28,15 +28,15 @@ from libinfiniop import (
 # ==============================================================================
 # (batch, num_heads, q_len, kv_len_buffer, total_kv_len, head_dim, is_causal)
 _TEST_CASES_ = [
-    # (1, 1, 256, 512, 256, 64, False),
-    # (1, 1, 256, 512, 320, 64, True),
-    # (1, 1, 512, 512, 512, 64, True),
-    # (1, 1, 256, 512, 256, 128, False),
-    # (1, 1, 256, 512, 320, 128, True),
+    (1, 1, 256, 512, 256, 64, False),
+    (1, 1, 256, 512, 320, 64, True),
+    (1, 1, 512, 512, 512, 64, True),
+    (1, 1, 256, 512, 256, 128, False),
+    (1, 1, 256, 512, 320, 128, True),
     (1, 8, 512, 4096, 1024, 64, True),
 ]
 
-_TENSOR_DTYPES = [InfiniDtype.F16,]
+_TENSOR_DTYPES = [InfiniDtype.F32,]
 
 _TOLERANCE_MAP = {
     InfiniDtype.F16: {"atol": 2e-2, "rtol": 2e-2},
