@@ -1,4 +1,5 @@
 import os
+import sys
 import platform
 import ctypes
 from ctypes import c_int, c_int64, c_uint64, POINTER
@@ -9,6 +10,14 @@ from pathlib import Path
 from .structs import *
 
 INFINI_ROOT = os.getenv("INFINI_ROOT") or str(Path.home() / ".infini")
+
+
+def _prepend_env_path(var_name, value):
+    old_value = os.environ.get(var_name, "")
+    paths = old_value.split(os.pathsep) if old_value else []
+    if value in paths:
+        return
+    os.environ[var_name] = f"{value}{os.pathsep}{old_value}" if old_value else value
 
 
 class InfiniLib:
@@ -52,8 +61,35 @@ def open_lib():
         librt_path is not None
     ), f"Cannot find infinirt.dll or libinfinirt.so. Check if INFINI_ROOT is set correctly."
 
-    librt = ctypes.CDLL(librt_path)
-    libop = ctypes.CDLL(libop_path)
+    if system_name == "Linux":
+        lib_dir = str(Path(librt_path).parent)
+        _prepend_env_path("LD_LIBRARY_PATH", lib_dir)
+
+    def _load_cdlls():
+        if system_name == "Linux" and hasattr(os, "RTLD_GLOBAL") and hasattr(os, "RTLD_NOW"):
+            mode = os.RTLD_GLOBAL | os.RTLD_NOW
+            rt = ctypes.CDLL(librt_path, mode=mode)
+            op = ctypes.CDLL(libop_path, mode=mode)
+            return rt, op
+        rt = ctypes.CDLL(librt_path)
+        op = ctypes.CDLL(libop_path)
+        return rt, op
+
+    try:
+        librt, libop = _load_cdlls()
+    except OSError as err:
+        # dlopen on Linux may require LD_LIBRARY_PATH to be set before process start.
+        # Re-exec once with corrected environment to make runtime dependency lookup work.
+        if (
+            system_name == "Linux"
+            and "libinfinirt.so" in str(err)
+            and os.environ.get("_INFINI_REEXEC_DONE") != "1"
+        ):
+            os.environ["_INFINI_REEXEC_DONE"] = "1"
+            argv = [sys.executable] + sys.argv
+            os.execvpe(sys.executable, argv, os.environ)
+        raise
+
     lib = InfiniLib(librt, libop)
     lib.infiniopCreateTensorDescriptor.argtypes = [
         POINTER(infiniopTensorDescriptor_t),

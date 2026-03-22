@@ -19,6 +19,58 @@ _ERROR_STATS_COUNT = 0
 _ERROR_STATS_MAX_ABS = 0.0
 _PROFILE_PENDING_ROWS = {}
 _PROFILE_CURRENT_SHAPE = "unknown"
+_PROFILE_CURRENT_DTYPE = "unknown"
+
+
+def _is_shape_like(value):
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        return False
+    if len(value) == 0:
+        return False
+    return all(isinstance(dim, (int, np.integer)) for dim in value)
+
+
+def _is_output_shape_param(param_name):
+    name = param_name.lower()
+    output_tokens = (
+        "out",
+        "output",
+        "dst",
+        "dest",
+        "result",
+        "y",
+        "c",
+    )
+    for token in output_tokens:
+        if name == f"{token}_shape" or name.startswith(f"{token}_"):
+            return True
+    return False
+
+
+def _resolve_profile_shape(test_case, test_func=None):
+    input_shapes = []
+
+    if test_func is not None:
+        try:
+            params = list(inspect.signature(test_func).parameters.keys())
+            case_param_names = params[2 : 2 + len(test_case)]
+            for param_name, value in zip(case_param_names, test_case):
+                if not param_name.endswith("_shape"):
+                    continue
+                if _is_output_shape_param(param_name):
+                    continue
+                if _is_shape_like(value):
+                    input_shapes.append(f"{param_name}={tuple(value)}")
+        except Exception:
+            input_shapes = []
+
+    if input_shapes:
+        return " | ".join(input_shapes)
+
+    for value in test_case:
+        if _is_shape_like(value):
+            return str(tuple(value))
+    return str(test_case[0]) if len(test_case) > 0 else "unknown"
 
 
 def _reset_error_stats():
@@ -103,22 +155,57 @@ def _record_profile_timing(desc, elapsed_ms, device, opname):
     row = _PROFILE_PENDING_ROWS.setdefault(filepath, {})
     row[role] = elapsed_ms
     row.setdefault("shape", _PROFILE_CURRENT_SHAPE)
+    row.setdefault("dtype", _PROFILE_CURRENT_DTYPE)
 
     if "pytorch_ms" in row and "lib_ms" in row:
+        _ensure_profile_csv_schema(filepath)
         file_exists = os.path.exists(filepath)
         with open(filepath, "a", newline="") as f:
             writer = csv.writer(f)
             if not file_exists:
-                writer.writerow(["shape", "pytorch_ms", "lib_ms"])
+                writer.writerow(["shape", "dtype", "pytorch_ms", "lib_ms"])
             writer.writerow(
                 [
                     row["shape"],
+                    row["dtype"],
                     f"{row['pytorch_ms']:.9f}",
                     f"{row['lib_ms']:.9f}",
                 ]
             )
 
         _PROFILE_PENDING_ROWS[filepath] = {}
+
+
+def _ensure_profile_csv_schema(filepath):
+    if not os.path.exists(filepath):
+        return
+
+    with open(filepath, "r", newline="") as f:
+        rows = list(csv.reader(f))
+
+    if not rows:
+        return
+
+    header = rows[0]
+    new_header = ["shape", "dtype", "pytorch_ms", "lib_ms"]
+    if header == new_header:
+        return
+
+    if header != ["shape", "pytorch_ms", "lib_ms"]:
+        return
+
+    migrated_rows = [new_header]
+    for raw in rows[1:]:
+        if len(raw) >= 4:
+            migrated_rows.append(raw[:4])
+        elif len(raw) == 3:
+            migrated_rows.append([raw[0], "unknown", raw[1], raw[2]])
+
+    tmp_path = f"{filepath}.tmp"
+    with open(tmp_path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerows(migrated_rows)
+    os.replace(tmp_path, filepath)
 
 
 def check_error(status):
@@ -857,9 +944,10 @@ def test_operator(device, test_func, test_cases, tensor_dtypes):
 
     try:
         for test_case in test_cases:
-            global _PROFILE_CURRENT_SHAPE
-            _PROFILE_CURRENT_SHAPE = str(test_case[0]) if len(test_case) > 0 else "unknown"
+            global _PROFILE_CURRENT_SHAPE, _PROFILE_CURRENT_DTYPE
+            _PROFILE_CURRENT_SHAPE = _resolve_profile_shape(test_case, test_func)
             for tensor_dtype in tensor_dtypes:
+                _PROFILE_CURRENT_DTYPE = str(InfiniDtypeNames.get(tensor_dtype, tensor_dtype))
                 test_func(
                     handle,
                     device,

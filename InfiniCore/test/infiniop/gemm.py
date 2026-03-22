@@ -36,6 +36,7 @@ _TEST_CASES = [
     (1.0, 0.0, (128, 4096), (4096, 11008), (128, 11008), None, None, None),
     # MLP down projection: [N, intermediate] x [intermediate, hidden] -> [N, hidden]
     (1.0, 0.0, (128, 11008), (11008, 4096), (128, 4096), None, None, None),
+    # (1.0, 0.0, (1024, 4096), (4096, 32000), (1024, 32000), None, None, None),
 
     # ---- Decode phase (e.g., bs=1, seq=1 => N=1) ----
     # Attention/MLP projections at single-token step

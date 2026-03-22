@@ -1,5 +1,9 @@
 ﻿#include "../../../devices/nvidia/nvidia_kernel_common.cuh"
 #include "infinicore.h"
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpass-failed"
+#endif
 #include <cub/device/device_radix_sort.cuh>
 #include <cub/device/device_reduce.cuh>
 #include <cub/device/device_scan.cuh>
@@ -269,3 +273,7 @@ struct Algo {
 };
 
 } // namespace op::random_sample::nvidia
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif

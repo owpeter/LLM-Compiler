@@ -470,6 +470,10 @@ __global__ void PagedAttentionPrefillWarpGlobalKernel(
     }
 }
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpass-failed"
+#endif
 template <typename Tindex, typename Tdata, typename Tcompute, int HEAD_SIZE>
 __global__ void PagedAttentionPrefillReferenceKernel(
     Tdata *out_,
@@ -587,6 +591,9 @@ __global__ void PagedAttentionPrefillReferenceKernel(
 
     out_ptr[dim_idx] = static_cast<Tdata>(acc);
 }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 template <typename Tindex, typename Tdata, int HEAD_SIZE, int BLOCK_M, int BLOCK_N>
 __device__ void PagedAttentionPrefillWarpCtaKernel(
